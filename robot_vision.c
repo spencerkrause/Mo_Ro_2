@@ -7,7 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+void printAreas(squares_t *squares){
+       printf("Areas of squares: \n");
+       while(squares != NULL) {
+               printf("  %d\n", squares->area);
+               squares = squares->next;
+       }
+}
 int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor;
