@@ -7,13 +7,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-void printAreas(squares_t *squares){
+void printAreas(squares_t *squares) {
        printf("Areas of squares: \n");
        while(squares != NULL) {
                printf("  %d\n", squares->area);
                squares = squares->next;
        }
 }
+float getRatio(int x, int y) {//x>y
+  float ratio = (float)x/float(y)
+  //printf("Ratio of biggest to next biggest = %f\n", ratio);
+  return ratio;
+}
+
 int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor;
