@@ -7,6 +7,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+// Draw an X marker on the image
+void draw_X(squares_t *s, IplImage *img) {
+	CvPoint pt1, pt2;
+	int sq_amt = (int) (sqrt(s->area) / 2);	
+
+	// Upper Left to Lower Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y - sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y + sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+
+	// Lower Left to Upper Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y + sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y - sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+}
+
 void printAreas(squares_t *squares) {
        printf("Areas of squares: \n");
        while(squares != NULL) {
@@ -14,8 +35,9 @@ void printAreas(squares_t *squares) {
                squares = squares->next;
        }
 }
-float getRatio(int x, int y) {//x>y
-  float ratio = (float)x/float(y)
+
+float getRatio(int x, int y) {  // x>y
+  float ratio = (float)x / (float)y;
   //printf("Ratio of biggest to next biggest = %f\n", ratio);
   return ratio;
 }
