@@ -7,6 +7,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+// Draw an X marker on the image
+void draw_X(squares_t *s, IplImage *img) {
+	CvPoint pt1, pt2;
+	int sq_amt = (int) (sqrt(s->area) / 2);	
+
+	// Upper Left to Lower Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y - sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y + sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+
+	// Lower Left to Upper Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y + sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y - sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+}
+
 void printAreas(squares_t *squares) {
        printf("Areas of squares: \n");
        while(squares != NULL) {
@@ -14,20 +35,19 @@ void printAreas(squares_t *squares) {
                squares = squares->next;
        }
 }
-float getRatio(int x, int y) {//x>y
-	float ratio = (float)x/(float)y;
-	  //printf("Ratio of biggest to next biggest = %f\n", ratio);
-	return ratio;
+
+float getRatio(int x, int y) {  // x>y
+  float ratio = (float)x / (float)y;
+  //printf("Ratio of biggest to next biggest = %f\n", ratio);
+  return ratio;
 }
 
 int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor;
 	IplImage *image = NULL, *hsv = NULL, *threshold = NULL;
-	squares_t *squares, *biggest, *sq_idx;
-	CvPoint pt1, pt2;
-	int sq_amt;
-
+	squares_t *squares, *biggest_1, *biggest_2, *sq_idx;
+	
 	// Make sure we have a valid command line argument
 	if(argv <= 1) {
 		printf("Usage: robot_test <address of robot>\n");	
@@ -94,32 +114,20 @@ int main(int argv, char **argc) {
 		squares = ri_find_squares(threshold, RI_DEFAULT_SQUARE_SIZE);
 
 		// Loop over the squares and find the biggest one
-		biggest = squares;
+		biggest_1 = squares;
+		biggest_2 = squares;
 		sq_idx = squares;
 		while(sq_idx != NULL) {
-			if(sq_idx->area > biggest->area)
-				biggest = sq_idx;
+			if(sq_idx->area > biggest_1->area)
+				biggest_1 = sq_idx;
+			if(sq_idx->area > biggest_2->area && sq_idx->area < biggest_1->area)
 			sq_idx = sq_idx->next;
 		}
 		
-		// Only draw if we have squares
-		if(biggest != NULL) {
-			// Draw an X marker on the image
-			sq_amt = (int) (sqrt(biggest->area) / 2);	
-
-			// Upper Left to Lower Right
-			pt1.x = biggest->center.x - sq_amt;
-			pt1.y = biggest->center.y - sq_amt;
-			pt2.x = biggest->center.x + sq_amt;
-			pt2.y = biggest->center.y + sq_amt;
-			cvLine(image, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
-
-			// Lower Left to Upper Right
-			pt1.x = biggest->center.x - sq_amt;
-			pt1.y = biggest->center.y + sq_amt;
-			pt2.x = biggest->center.x + sq_amt;
-			pt2.y = biggest->center.y - sq_amt;
-			cvLine(image, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+		// Only draw if we have 2 biggest squares
+		if(biggest_1 != NULL && biggest_2 != NULL) {
+			draw_X(biggest_1, image);
+			draw_X(biggest_2, image);
 		}
 
 		// Display the image with the drawing on it
@@ -136,8 +144,8 @@ int main(int argv, char **argc) {
 		}
 
 		// Move forward unless there's something in front of the robot
-		if(!ri_IR_Detected(&ri))
-			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);
+		/*if(!ri_IR_Detected(&ri))
+			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 
 	} while(1);
 

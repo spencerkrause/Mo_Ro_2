@@ -3,8 +3,8 @@
 #ifndef __RC_COLORS_H__
 #define __RC_COLORS_H__
 
-#define RC_LOW(x)	cvScalar(x - 5, 100, 100, 0)
-#define RC_HIGH(x) 	cvScalar(x + 5, 255, 255, 0)
+#define RC_LOW(x)	cvScalar(x - 7, 75, 75, 0)
+#define RC_HIGH(x) 	cvScalar(x + 7, 255, 255, 0)
 
 /* Pink */
 #define RC_PINK		173
