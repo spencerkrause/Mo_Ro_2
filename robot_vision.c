@@ -52,6 +52,7 @@ int main(int argv, char **argc) {
 	// Create a window to display the output
 	cvNamedWindow("Rovio Camera", CV_WINDOW_AUTOSIZE);
 	cvNamedWindow("Biggest Square", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("Thresholded", CV_WINDOW_AUTOSIZE);
 
 	// Create an image to store the image from the camera
 	image = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
@@ -87,6 +88,8 @@ int main(int argv, char **argc) {
 		// Pick out only the yellow color from the image
 		cvInRangeS(hsv, RC_PINK_LOW, RC_PINK_HIGH, threshold);
 
+		cvShowImage("Thresholded", threshold);
+		
 		// Find the squares in the image
 		squares = ri_find_squares(threshold, RI_DEFAULT_SQUARE_SIZE);
 
@@ -141,7 +144,7 @@ int main(int argv, char **argc) {
 	// Clean up (although we'll never get here...)
 	cvDestroyWindow("Rovio Camera");
 	cvDestroyWindow("Biggest Square");
-	
+	cvDestroyWindow("Thresholded");
 	// Free the images
 	cvReleaseImage(&hsv);
 	cvReleaseImage(&threshold);
