@@ -15,9 +15,9 @@ void printAreas(squares_t *squares) {
        }
 }
 float getRatio(int x, int y) {//x>y
-  float ratio = (float)x/float(y)
-  //printf("Ratio of biggest to next biggest = %f\n", ratio);
-  return ratio;
+	float ratio = (float)x/(float)y;
+	  //printf("Ratio of biggest to next biggest = %f\n", ratio);
+	return ratio;
 }
 
 int main(int argv, char **argc) {
