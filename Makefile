@@ -3,13 +3,13 @@ LIB_FLAGS=-L. -lrobot_if
 CPP_LIB_FLAGS=${LIB_FLAGS} -lrobot_if++
 LIB_LINK=-lhighgui -lcv -lcxcore -lm
 
-PROGS=robot_camera_example
+PROGS=robot_vision
 
 all: ${PROGS}
 
-robot_camera_example: robot_camera_example.c
-	gcc ${CFLAGS} -c robot_camera_example.c
-	gcc ${CFLAGS} -o robot_camera_example robot_camera_example.o ${LIB_FLAGS} ${LIB_LINK}
+robot_vision: robot_vision.c
+	gcc ${CFLAGS} -c robot_vision.c ${LIB_FLAGS}
+	gcc ${CFLAGS} -o robot_vision robot_vision.o ${LIB_FLAGS} ${LIB_LINK}
 
 clean:
 	rm -rf *.o *~
