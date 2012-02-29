@@ -1,1 +1,31 @@
-first commit
+// To COPY the code from the repository on github
+$ mkdir Mo_Ro_2  // in desired folder
+$ cd Mo_Ro_2
+$ git -init
+
+$ git clone git@github.com:spencerkrause/Mo_Ro_2.git
+
+// To merge REMOTE to LOCAL Repo
+
+$ git pull origin master
+
+// To commit changes to code to your LOCAL git repository (Must be done before code commit to GITHUB)
+
+$ git add <filename to be add>
+$ git commit -m 'message you want to attach to this particular commit'
+
+  - OR IF YOU'VE ONLY CHANGED A FILE ALREADY IN THE REPOSITORY -
+
+$ git commit -a -m 'your message here'
+
+// To commit changes to the repository on GITHUB
+-- if you've never pushed to this repository --
+
+$ git remote add origin git@github.com:spencerkrause/Mo_Ro_2.git
+
+// Pull from remote to update your commit with any changes anyone else has made
+$git pull origin master
+
+// then update the REMOTE repository with your code
+
+$ git push origin master
