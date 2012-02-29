@@ -7,33 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-void printAreas(squares_t *squares){
+void printAreas(squares_t *squares) {
        printf("Areas of squares: \n");
        while(squares != NULL) {
                printf("  %d\n", squares->area);
                squares = squares->next;
        }
 }
-
-// Draw an X marker on the image
-void draw_X(squares_t *s, IplImage *img) {
-	CvPoint pt1, pt2;
-	int sq_amt = (int) (sqrt(s->area) / 2);	
-
-	// Upper Left to Lower Right
-	pt1.x = s->center.x - sq_amt;
-	pt1.y = s->center.y - sq_amt;
-	pt2.x = s->center.x + sq_amt;
-	pt2.y = s->center.y + sq_amt;
-	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
-
-	// Lower Left to Upper Right
-	pt1.x = s->center.x - sq_amt;
-	pt1.y = s->center.y + sq_amt;
-	pt2.x = s->center.x + sq_amt;
-	pt2.y = s->center.y - sq_amt;
-	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+float getRatio(int x, int y) {//x>y
+  float ratio = (float)x/float(y)
+  //printf("Ratio of biggest to next biggest = %f\n", ratio);
+  return ratio;
 }
 
 int main(int argv, char **argc) {
@@ -64,8 +48,9 @@ int main(int argv, char **argc) {
 	}
 
 	// Create a window to display the output
-	cvNamedWindow("Threshold", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("Rovio Camera", CV_WINDOW_AUTOSIZE);
 	cvNamedWindow("Biggest Square", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("Thresholded", CV_WINDOW_AUTOSIZE);
 
 	// Create an image to store the image from the camera
 	image = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
@@ -93,14 +78,15 @@ int main(int argv, char **argc) {
 			printf("Unable to capture an image!\n");
 			continue;
 		}
-		
+		cvShowImage("Rovio Camera", image);
+
 		// Convert the image from RGB to HSV
 		cvCvtColor(image, hsv, CV_BGR2HSV);
 
 		// Pick out only the yellow color from the image
 		cvInRangeS(hsv, RC_PINK_LOW, RC_PINK_HIGH, threshold);
-		
-		cvShowImage("Threshold", threshold);
+
+		cvShowImage("Thresholded", threshold);
 		
 		// Find the squares in the image
 		squares = ri_find_squares(threshold, RI_DEFAULT_SQUARE_SIZE);
@@ -144,7 +130,7 @@ int main(int argv, char **argc) {
 	// Clean up (although we'll never get here...)
 	cvDestroyWindow("Rovio Camera");
 	cvDestroyWindow("Biggest Square");
-	
+	cvDestroyWindow("Thresholded");
 	// Free the images
 	cvReleaseImage(&hsv);
 	cvReleaseImage(&threshold);
