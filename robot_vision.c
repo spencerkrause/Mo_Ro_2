@@ -70,7 +70,7 @@ int main(int argv, char **argc) {
 	}
 
 	// Create a window to display the output
-	cvNamedWindow("Rovio Camera", CV_WINDOW_AUTOSIZE);
+	//cvNamedWindow("Rovio Camera", CV_WINDOW_AUTOSIZE);
 	cvNamedWindow("Biggest Square", CV_WINDOW_AUTOSIZE);
 	cvNamedWindow("Thresholded", CV_WINDOW_AUTOSIZE);
 
@@ -100,12 +100,12 @@ int main(int argv, char **argc) {
 			printf("Unable to capture an image!\n");
 			continue;
 		}
-		cvShowImage("Rovio Camera", image);
+		//cvShowImage("Rovio Camera", image);
 
 		// Convert the image from RGB to HSV
 		cvCvtColor(image, hsv, CV_BGR2HSV);
 
-		// Pick out only the yellow color from the image
+		// Pick out only the pink color from the image
 		cvInRangeS(hsv, RC_PINK_LOW, RC_PINK_HIGH, threshold);
 
 		cvShowImage("Thresholded", threshold);
@@ -117,17 +117,26 @@ int main(int argv, char **argc) {
 		biggest_1 = squares;
 		biggest_2 = squares;
 		sq_idx = squares;
-		while(sq_idx != NULL) {
-			if(sq_idx->area > biggest_1->area)
-				biggest_1 = sq_idx;
-			if(sq_idx->area > biggest_2->area && sq_idx->area < biggest_1->area)
-			sq_idx = sq_idx->next;
+		
+		if(sq_idx != NULL) {
+			if(sq_idx->next != NULL) {
+				printf("Finding the two largest\n");
+				while(sq_idx != NULL) {
+					if(sq_idx->area > biggest_1->area)
+						biggest_1 = sq_idx;
+					if(sq_idx->area > biggest_2->area && sq_idx->area < biggest_1->area)
+						biggest_2 = sq_idx;
+					sq_idx = sq_idx->next;
+				}
+			}
 		}
 		
+		printf("Drawing the two largest\n");
 		// Only draw if we have 2 biggest squares
-		if(biggest_1 != NULL && biggest_2 != NULL) {
+		if(biggest_1 != NULL && biggest_2 != biggest_1) {
 			draw_X(biggest_1, image);
 			draw_X(biggest_2, image);
+			pri
 		}
 
 		// Display the image with the drawing on it
@@ -146,16 +155,17 @@ int main(int argv, char **argc) {
 		// Move forward unless there's something in front of the robot
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
-
+		printf("Loop Complete\n");
 	} while(1);
 
 	// Clean up (although we'll never get here...)
-	cvDestroyWindow("Rovio Camera");
+	//cvDestroyWindow("Rovio Camera");
 	cvDestroyWindow("Biggest Square");
 	cvDestroyWindow("Thresholded");
+	
 	// Free the images
-	cvReleaseImage(&hsv);
 	cvReleaseImage(&threshold);
+	cvReleaseImage(&hsv);
 	cvReleaseImage(&image);
 
 	return 0;
