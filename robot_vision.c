@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 // Draw an X marker on the image
-void draw_X(squares_t *s, IplImage *img) {
+void draw_green_X(squares_t *s, IplImage *img) {
 	CvPoint pt1, pt2;
 	int sq_amt = (int) (sqrt(s->area) / 2);	
 
@@ -26,6 +26,25 @@ void draw_X(squares_t *s, IplImage *img) {
 	pt2.x = s->center.x + sq_amt;
 	pt2.y = s->center.y - sq_amt;
 	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+}
+
+void draw_red_X(squares_t *s, IplImage *img) {
+	CvPoint pt1, pt2;
+	int sq_amt = (int) (sqrt(s->area) / 2);	
+
+	// Upper Left to Lower Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y - sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y + sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(255, 0, 0), 3, CV_AA, 0);
+
+	// Lower Left to Upper Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y + sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y - sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(255, 0, 0), 3, CV_AA, 0);
 }
 
 void printAreas(squares_t *squares) {
@@ -114,13 +133,12 @@ int main(int argv, char **argc) {
 		squares = ri_find_squares(threshold, RI_DEFAULT_SQUARE_SIZE);
 
 		// Loop over the squares and find the biggest one
-		biggest_1 = squares;
-		biggest_2 = squares;
 		sq_idx = squares;
 		
 		if(sq_idx != NULL) {
 			printAreas(sq_idx);
 			sq_idx = squares;
+			biggest_1 = squares;
 			
 			if(sq_idx->next != NULL) {
 				//printf("Finding the two largest\n");
@@ -130,9 +148,11 @@ int main(int argv, char **argc) {
 					sq_idx = sq_idx->next;
 				}
 				
+				// Iterate through a second time to find second largest
 				sq_idx = squares;
+				biggest_2 = squares;
 				while(sq_idx != NULL) {
-					if(sq_idx->area > biggest_2->area && sq_idx->area < biggest_1->area)
+					if(sq_idx->area > biggest_2->area && sq_idx != biggest_1)
 						biggest_2 = sq_idx;
 					sq_idx = sq_idx->next;
 				}
@@ -142,8 +162,8 @@ int main(int argv, char **argc) {
 		//printf("Drawing the two largest\n");
 		// Only draw if we have 2 biggest squares
 		if(biggest_1 != NULL && biggest_2 != biggest_1) {
-			draw_X(biggest_1, image);
-			draw_X(biggest_2, image);
+			draw_green_X(biggest_1, image);
+			draw_red_X(biggest_2, image);
 			printf("Area 1 = %d\tArea 2 = %d\n", biggest_1->area, biggest_2->area);
 		}
 
@@ -152,18 +172,22 @@ int main(int argv, char **argc) {
 
 		// Update the UI (10ms wait)
 		cvWaitKey(10);
-
+		
 		// Release the square data
 		while(squares != NULL) {
 			sq_idx = squares->next;
 			free(squares);
 			squares = sq_idx;	
 		}
+		
+		biggest_1 = NULL;
+		biggest_2 = NULL;
 
 		// Move forward unless there's something in front of the robot
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
+		getc(stdin);
 	} while(1);
 
 	// Clean up (although we'll never get here...)
