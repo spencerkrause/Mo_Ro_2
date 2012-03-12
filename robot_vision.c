@@ -47,6 +47,15 @@ void draw_red_X(squares_t *s, IplImage *img) {
 	cvLine(img, pt1, pt2, CV_RGB(255, 0, 0), 3, CV_AA, 0);
 }
 
+void draw_vertical_line(IplImage *img){
+	CvPoint pt1, pt2;
+	pt1.x = img->width/2;
+	pt1.y = 0;
+	pt2.x = img->width/2;
+	pt2.y = img->height;
+	
+	cvLine(img, pt1, pt2, CV_RGB(0, 60, 255), 3, CV_AA, 0);
+}
 void printAreas(squares_t *squares) {
        printf("Areas of squares: \n");
        while(squares != NULL) {
@@ -166,7 +175,9 @@ int main(int argv, char **argc) {
 			draw_red_X(biggest_2, image);
 			printf("Area 1 = %d\tArea 2 = %d\n", biggest_1->area, biggest_2->area);
 		}
-
+		// display a straight vertical line
+		draw_vertical_line(image);
+		
 		// Display the image with the drawing on it
 		cvShowImage("Biggest Square", image);
 
