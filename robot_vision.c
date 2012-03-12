@@ -64,7 +64,7 @@ int main(int argv, char **argc) {
 	}
 
 	// Setup the camera
-	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_HIGH)) {
+	if(ri_cfg_camera(&ri, 0x40, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_HIGH)) {
 		printf("Failed to configure the camera!\n");
 		exit(-1);
 	}
@@ -119,11 +119,19 @@ int main(int argv, char **argc) {
 		sq_idx = squares;
 		
 		if(sq_idx != NULL) {
+			printAreas(sq_idx);
+			sq_idx = squares;
+			
 			if(sq_idx->next != NULL) {
-				printf("Finding the two largest\n");
+				//printf("Finding the two largest\n");
 				while(sq_idx != NULL) {
 					if(sq_idx->area > biggest_1->area)
 						biggest_1 = sq_idx;
+					sq_idx = sq_idx->next;
+				}
+				
+				sq_idx = squares;
+				while(sq_idx != NULL) {
 					if(sq_idx->area > biggest_2->area && sq_idx->area < biggest_1->area)
 						biggest_2 = sq_idx;
 					sq_idx = sq_idx->next;
@@ -131,12 +139,12 @@ int main(int argv, char **argc) {
 			}
 		}
 		
-		printf("Drawing the two largest\n");
+		//printf("Drawing the two largest\n");
 		// Only draw if we have 2 biggest squares
 		if(biggest_1 != NULL && biggest_2 != biggest_1) {
 			draw_X(biggest_1, image);
 			draw_X(biggest_2, image);
-			pri
+			printf("Area 1 = %d\tArea 2 = %d\n", biggest_1->area, biggest_2->area);
 		}
 
 		// Display the image with the drawing on it
@@ -155,7 +163,7 @@ int main(int argv, char **argc) {
 		// Move forward unless there's something in front of the robot
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
-		printf("Loop Complete\n");
+		//printf("Loop Complete\n");
 	} while(1);
 
 	// Clean up (although we'll never get here...)
