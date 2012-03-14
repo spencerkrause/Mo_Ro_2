@@ -92,7 +92,7 @@ int main(int argv, char **argc) {
 	}
 
 	// Setup the camera
-	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_HIGH)) {
+	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_LOW)) {
 		printf("Failed to configure the camera!\n");
 		exit(-1);
 	}
@@ -170,7 +170,7 @@ int main(int argv, char **argc) {
 		
 		//printf("Drawing the two largest\n");
 		// Only draw if we have 2 biggest squares
-		if(biggest_1 != NULL && biggest_2 != biggest_1) {
+		if(biggest_1 != NULL && biggest_2 != NULL && biggest_2 != biggest_1) {
 			draw_green_X(biggest_1, image);
 			draw_red_X(biggest_2, image);
 			printf("Area 1 = %d\tArea 2 = %d\n", biggest_1->area, biggest_2->area);
