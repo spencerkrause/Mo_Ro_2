@@ -92,7 +92,7 @@ int main(int argv, char **argc) {
 	}
 
 	// Setup the camera
-	if(ri_cfg_camera(&ri, 0x40, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_HIGH)) {
+	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_LOW)) {
 		printf("Failed to configure the camera!\n");
 		exit(-1);
 	}
@@ -135,7 +135,8 @@ int main(int argv, char **argc) {
 
 		// Pick out only the pink color from the image
 		cvInRangeS(hsv, RC_PINK_LOW, RC_PINK_HIGH, threshold);
-
+		//cvInRangeS(hsv, RC_LOW(RC_PINK), RC_HIGH(RC_PINK), threshold);
+		
 		cvShowImage("Thresholded", threshold);
 		
 		// Find the squares in the image
@@ -214,7 +215,7 @@ int main(int argv, char **argc) {
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
-		getc(stdin);
+		//getc(stdin);//diagnostic pause
 	} while(1);
 
 	// Clean up (although we'll never get here...)

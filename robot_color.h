@@ -8,8 +8,8 @@
 
 /* Pink */
 #define RC_PINK		173
-#define RC_PINK_LOW	cvScalar(150, 65, 65, 0)
-#define RC_PINK_HIGH	cvScalar(190, 255, 255, 0)
+#define RC_PINK_LOW	cvScalar(0, 65, 47, 0)
+#define RC_PINK_HIGH	cvScalar(255, 255, 255, 0)
 
 /* Yellow */
 #define RC_YELLOW	30
