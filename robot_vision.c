@@ -180,10 +180,16 @@ int main(int argv, char **argc) {
 		
 		//printf("Drawing the two largest\n");
 		// Only draw if we have 2 biggest squares
-		if(biggest_1 != NULL && biggest_2 != NULL ) {
+		if(biggest_1 != NULL){
 			draw_green_X(biggest_1, image);
+			printf("Area 1 = %d", biggest_1->area);
+		}
+		if(biggest_1 != NULL && biggest_2 != NULL ) {
 			draw_red_X(biggest_2, image);
-			printf("Area 1 = %d\tArea 2 = %d\n", biggest_1->area, biggest_2->area);
+			printf("\tArea 2 = %d\n", biggest_2->area);
+		}
+		else if (biggest_1 != NULL){
+			printf("\n");
 		}
 		// display a straight vertical line
 		draw_vertical_line(image);
