@@ -9,6 +9,10 @@
 #include <unistd.h>
 
 // Draw an X marker on the image
+int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
+  //code me -> compare areas
+  
+}
 void draw_green_X(squares_t *s, IplImage *img) {
 	CvPoint pt1, pt2;
 	int sq_amt = (int) (sqrt(s->area) / 2);	
