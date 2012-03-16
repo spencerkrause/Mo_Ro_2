@@ -175,12 +175,13 @@ int main(int argv, char **argc) {
 			draw_red_X(biggest_2, image);
 			printf("Area 1 = %d\tArea 2 = %d\n", biggest_1->area, biggest_2->area);
 		}
+		
 		// display a straight vertical line
-		draw_vertical_line(image);
+		//draw_vertical_line(image);
 		
 		// Display the image with the drawing on it
 		cvShowImage("Biggest Square", image);
-
+		
 		// Update the UI (10ms wait)
 		cvWaitKey(10);
 		
@@ -198,7 +199,7 @@ int main(int argv, char **argc) {
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
-		getc(stdin);
+		//getc(stdin);
 	} while(1);
 
 	// Clean up (although we'll never get here...)
