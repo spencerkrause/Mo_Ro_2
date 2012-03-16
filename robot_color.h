@@ -7,9 +7,14 @@
 #define RC_HIGH(x) 	cvScalar(x + 5, 255, 255, 0)
 
 /* Pink */
-#define RC_PINK		5
+#define RC_PINK		173
 #define RC_PINK_LOW	RC_LOW(RC_PINK)
 #define RC_PINK_HIGH	RC_HIGH(RC_PINK)
+
+/* Red */
+#define RC_RED		5
+#define RC_RED_LOW	RC_LOW(RC_PINK)
+#define RC_RED_HIGH	RC_HIGH(RC_PINK)
 
 /* Yellow */
 #define RC_YELLOW	30
