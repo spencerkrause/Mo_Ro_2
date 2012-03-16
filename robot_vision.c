@@ -1,5 +1,12 @@
 /* Filename:  robot_vision.c
  * Author:	Based on robot_camera_example.c from API
+ * 
+ * Note: I added the cvOr() function to compute the new threshold, it definitely has improved our thresholded image.
+ * 	 But the thresholded image still needs some work. I tried various combinations of HSV values but it didn't help that much.
+ * 	 Also, I added a function (get_square_diffence()) to calculate the difference in distance between the biggest two squares 
+ * 	and the center vertical line. 
+ * 
+ * A side note: I found that the resolution/quality of the cameras varies with different robots. I have been using Rosie.
  */
 
 #include "robot_if.h"
@@ -8,7 +15,29 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+//compute the difference in distance between the biggest two squares and the center vertical line
+void get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
+	CvPoint pt1, pt2;
+	int dist_to_center1, dist_to_center2, diff;
+	
+	pt1 = square1->center;
+	pt2 = square2->center;
+	
+	dist_to_center1 = pt1.x - img->width/2;
+	dist_to_center2 = pt2.x - img->width/2;
+	
+	//negative diff means robot pointing to the right of the origin, positive diff means robot pointing to the left of the origin
+	diff = dist_to_center1 + dist_to_center2;
+	
+	printf("square 1 distance = %d, square 2 distance = %d, difference in distance = %d\n", 
+	       dist_to_center1, dist_to_center2, diff);
+}
+
 // Draw an X marker on the image
+int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
+  //code me -> compare areas
+  return 0;
+}
 void draw_green_X(squares_t *s, IplImage *img) {
 	CvPoint pt1, pt2;
 	int sq_amt = (int) (sqrt(s->area) / 2);	
@@ -73,7 +102,7 @@ float getRatio(int x, int y) {  // x>y
 int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor;
-	IplImage *image = NULL, *hsv = NULL, *threshold = NULL;
+	IplImage *image = NULL, *hsv = NULL, *threshold_1 = NULL, *threshold_2 = NULL, *final_threshold = NULL;
 	squares_t *squares, *biggest_1, *biggest_2, *sq_idx;
 	
 	// Make sure we have a valid command line argument
@@ -109,8 +138,10 @@ int main(int argv, char **argc) {
 	// We configured the camera for 640x480 above, so use that size here
 	hsv = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
 
-	// And an image for the thresholded version
-	threshold = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 1);
+	// And an image for each thresholded version
+	threshold_1 = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 1);
+	threshold_2 = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 1);
+	final_threshold = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 1);
 
 	// Move the head up to the middle position
 	ri_move(&ri, RI_HEAD_MIDDLE, RI_FASTEST);
@@ -133,13 +164,20 @@ int main(int argv, char **argc) {
 		// Convert the image from RGB to HSV
 		cvCvtColor(image, hsv, CV_BGR2HSV);
 
-		// Pick out only the pink color from the image
-		cvInRangeS(hsv, RC_PINK_LOW, RC_PINK_HIGH, threshold);
+		// Pick out the first range of pink color from the image
+		cvInRangeS(hsv, RC_PINK_LOW_1, RC_PINK_HIGH_1, threshold_1);
+		
+		// Pick out the second range of pink color from the image
+		cvInRangeS(hsv, RC_PINK_LOW_2, RC_PINK_HIGH_2, threshold_2);
+		
+		// compute the final threshold image by using cvOr
+		cvOr(threshold_1, threshold_2, final_threshold, NULL);
+		
 
-		cvShowImage("Thresholded", threshold);
+		cvShowImage("Thresholded", final_threshold);
 		
 		// Find the squares in the image
-		squares = ri_find_squares(threshold, RI_DEFAULT_SQUARE_SIZE);
+		squares = ri_find_squares(final_threshold, RI_DEFAULT_SQUARE_SIZE);
 
 		// Loop over the squares and find the biggest one
 		sq_idx = squares;
@@ -171,7 +209,10 @@ int main(int argv, char **argc) {
 				  break;
 				}
 				while(sq_idx != NULL) {
-					if((sq_idx->area > biggest_2->area) && sq_idx != biggest_1)
+					
+					if((sq_idx->area > biggest_2->area) && sq_idx != biggest_1 && 
+						//make sure the same square doesn't drawn twice
+						sq_idx->center.x != biggest_1->center.x && sq_idx->center.y != biggest_1->center.y)
 						biggest_2 = sq_idx;
 					sq_idx = sq_idx->next;
 				}
@@ -187,16 +228,18 @@ int main(int argv, char **argc) {
 		if(biggest_1 != NULL && biggest_2 != NULL ) {
 			draw_red_X(biggest_2, image);
 			printf("\tArea 2 = %d\n", biggest_2->area);
+			get_square_diffence(biggest_1, biggest_2, image);
 		}
 		else if (biggest_1 != NULL){
 			printf("\n");
 		}
+		
 		// display a straight vertical line
 		draw_vertical_line(image);
 		
 		// Display the image with the drawing oon ito
 		cvShowImage("Biggest Square", image);
-
+		
 		// Update the UI (10ms wait)
 		cvWaitKey(10);
 		
@@ -214,7 +257,7 @@ int main(int argv, char **argc) {
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
-		//getc(stdin);
+		getc(stdin);
 	} while(1);
 
 	// Clean up (although we'll never get here...)
@@ -223,7 +266,9 @@ int main(int argv, char **argc) {
 	cvDestroyWindow("Thresholded");
 	
 	// Free the images
-	cvReleaseImage(&threshold);
+	cvReleaseImage(&threshold_1);
+	cvReleaseImage(&threshold_2);
+	cvReleaseImage(&final_threshold);
 	cvReleaseImage(&hsv);
 	cvReleaseImage(&image);
 
