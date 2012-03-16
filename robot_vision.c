@@ -9,6 +9,10 @@
 #include <unistd.h>
 
 // Draw an X marker on the image
+int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
+  //code me -> compare areas
+  
+}
 void draw_green_X(squares_t *s, IplImage *img) {
 	CvPoint pt1, pt2;
 	int sq_amt = (int) (sqrt(s->area) / 2);	
@@ -92,7 +96,7 @@ int main(int argv, char **argc) {
 	}
 
 	// Setup the camera
-	if(ri_cfg_camera(&ri, 0x40, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_HIGH)) {
+	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_LOW)) {
 		printf("Failed to configure the camera!\n");
 		exit(-1);
 	}
@@ -151,6 +155,8 @@ int main(int argv, char **argc) {
 			
 			if(sq_idx->next != NULL) {
 				//printf("Finding the two largest\n");
+			
+				//iterate through and find the largest square by area. 
 				while(sq_idx != NULL) {
 					if(sq_idx->area > biggest_1->area)
 						biggest_1 = sq_idx;
@@ -159,9 +165,17 @@ int main(int argv, char **argc) {
 				
 				// Iterate through a second time to find second largest
 				sq_idx = squares;
-				biggest_2 = squares;
+				
+				if(biggest_1 != squares)
+				  biggest_2 = squares;
+				else if(squares->next!=NULL)
+				  biggest_2 = squares->next;
+				else{
+				  printf("Only one square in list.  Getting out of here.\n");
+				  break;
+				}
 				while(sq_idx != NULL) {
-					if(sq_idx->area > biggest_2->area && sq_idx != biggest_1)
+					if((sq_idx->area > biggest_2->area) && sq_idx != biggest_1)
 						biggest_2 = sq_idx;
 					sq_idx = sq_idx->next;
 				}
@@ -170,16 +184,22 @@ int main(int argv, char **argc) {
 		
 		//printf("Drawing the two largest\n");
 		// Only draw if we have 2 biggest squares
-		if(biggest_1 != NULL && biggest_2 != biggest_1) {
+		if(biggest_1 != NULL){
 			draw_green_X(biggest_1, image);
+			printf("Area 1 = %d", biggest_1->area);
+		}
+		if(biggest_1 != NULL && biggest_2 != NULL ) {
 			draw_red_X(biggest_2, image);
-			printf("Area 1 = %d\tArea 2 = %d\n", biggest_1->area, biggest_2->area);
+			printf("\tArea 2 = %d\n", biggest_2->area);
+		}
+		else if (biggest_1 != NULL){
+			printf("\n");
 		}
 		
 		// display a straight vertical line
 		//draw_vertical_line(image);
 		
-		// Display the image with the drawing on it
+		// Display the image with the drawing oon ito
 		cvShowImage("Biggest Square", image);
 		
 		// Update the UI (10ms wait)
