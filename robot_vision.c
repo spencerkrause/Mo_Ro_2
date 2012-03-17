@@ -1,12 +1,20 @@
 /* Filename:  robot_vision.c
  * Author:	Based on robot_camera_example.c from API
  * 
- * Note: I added the cvOr() function to compute the new threshold, it definitely has improved our thresholded image.
+ * 05-16: I added the cvOr() function to compute the new threshold, it definitely has improved our thresholded image.
  * 	 But the thresholded image still needs some work. I tried various combinations of HSV values but it didn't help that much.
  * 	 Also, I added a function (get_square_diffence()) to calculate the difference in distance between the biggest two squares 
  * 	and the center vertical line. 
  * 
- * A side note: I found that the resolution/quality of the cameras varies with different robots. I have been using Rosie.
+ * A side note: I found that the resolution/quality of the cameras varies with different robots. Please use "Optimus"
+ * 
+ * 05-17: I tried several different robots and found that Optimus had the best threshold image for the current HSV values.
+ *	Also, I added a routine to move the robot through the maze.  It actually works pretty well 50% of the times, until 
+ *      the end where the robot has to make a right turn.  Because I didn't implement anything to keep track the distance 
+ *      the robot has gone, so it doesn't know when to make that 90 degrees right turn yet.  
+ * 
+ * (Lines 267- 305 are the movement stuff)
+ * 
  */
 
 #include "robot_if.h"
@@ -16,7 +24,7 @@
 #include <unistd.h>
 
 //compute the difference in distance between the biggest two squares and the center vertical line
-void get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
+int get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
 	CvPoint pt1, pt2;
 	int dist_to_center1, dist_to_center2, diff;
 	
@@ -29,8 +37,33 @@ void get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
 	//negative diff means robot pointing to the right of the origin, positive diff means robot pointing to the left of the origin
 	diff = dist_to_center1 + dist_to_center2;
 	
-	printf("square 1 distance = %d, square 2 distance = %d, difference in distance = %d\n", 
+	printf("square 1 distance = %d\t square 2 distance = %d\t difference in distance = %d\n", 
 	       dist_to_center1, dist_to_center2, diff);
+	
+	return diff;
+}
+//checks if the same square gets marked twice
+bool is_same_square(squares_t *square1, squares_t *square2){
+	CvPoint pt1, pt2;
+	int x_diff, y_diff;
+	pt1 = square1->center;
+	pt2 = square2->center;
+	
+	x_diff = abs(pt1.x - pt2.x);
+	y_diff = abs(pt1.y - pt2.y);
+	
+	if ((0 <= x_diff && x_diff <= 3) && (0 <= y_diff && y_diff <= 3))return true;
+	   
+	return false;
+}
+void get_diff_in_y(squares_t *square1, squares_t *square2){
+	int y_1, y_2, diff;
+	
+	y_1 = square1->center.y;
+	y_2 = square2->center.y;
+	
+	diff = y_1 - y_2;
+	printf("square_1 y = %d\t square_2 y = %d\tdifference in y = %d\n", y_1, y_2, diff);
 }
 
 // Draw an X marker on the image
@@ -101,9 +134,10 @@ float getRatio(int x, int y) {  // x>y
 
 int main(int argv, char **argc) {
 	robot_if_t ri;
-	int major, minor;
+	int major, minor, x_dist_diff;
 	IplImage *image = NULL, *hsv = NULL, *threshold_1 = NULL, *threshold_2 = NULL, *final_threshold = NULL;
 	squares_t *squares, *biggest_1, *biggest_2, *sq_idx;
+	bool same_square;
 	
 	// Make sure we have a valid command line argument
 	if(argv <= 1) {
@@ -209,10 +243,9 @@ int main(int argv, char **argc) {
 				  break;
 				}
 				while(sq_idx != NULL) {
-					
-					if((sq_idx->area > biggest_2->area) && sq_idx != biggest_1 && 
-						//make sure the same square doesn't drawn twice
-						sq_idx->center.x != biggest_1->center.x && sq_idx->center.y != biggest_1->center.y)
+					same_square = is_same_square(biggest_1, sq_idx);
+					//make sure the same square doesn't get drawn twice
+					if((sq_idx->area > biggest_2->area) && sq_idx != biggest_1 && same_square == false)
 						biggest_2 = sq_idx;
 					sq_idx = sq_idx->next;
 				}
@@ -228,7 +261,49 @@ int main(int argv, char **argc) {
 		if(biggest_1 != NULL && biggest_2 != NULL ) {
 			draw_red_X(biggest_2, image);
 			printf("\tArea 2 = %d\n", biggest_2->area);
-			get_square_diffence(biggest_1, biggest_2, image);
+			
+			//get the difference in distance between the two biggest squares and the center vertical line
+			x_dist_diff = get_square_diffence(biggest_1, biggest_2, image);
+			get_diff_in_y(biggest_1, biggest_2);
+			
+			//when the camera can't detect the other biggest square, which means now the second biggest square
+			//is much smaller than the first biggest square
+			if ((biggest_1->area - biggest_2->area) > 500){
+				//if both squares are at the left side of the center line
+				if (biggest_1->center.x < image->width/2 && biggest_2->center.x < image->width/2){
+					printf("rotate right at speed = 6\n");
+					ri_move(&ri, RI_TURN_RIGHT, 6); 
+				}
+				//if both squares are at the right side of the center line
+				else if (biggest_1->center.x > image->width/2 && biggest_2->center.x > image->width/2){
+					printf("rotate left at speed = 6\n");
+					ri_move(&ri, RI_TURN_LEFT, 6); 
+				}
+				//if the center line is in the middle of the two biggest squares
+				else if (biggest_1->center.x < image->width/2 && biggest_2->center.x > image->width/2 ){
+					printf("rotate right at speed = 2\n");
+					ri_move(&ri, RI_TURN_RIGHT, 2); 
+					
+				}
+				else{
+					printf("rotate left at speed = 2\n");
+					ri_move(&ri, RI_TURN_LEFT, 2); 
+				}
+				
+			}
+			else{
+				//rotate to the left
+				if (x_dist_diff < -40){
+					printf("rotate left at speed = 6\n");
+					ri_move(&ri, RI_TURN_LEFT, 6); 
+				}
+				//rotate to the right
+				else if (x_dist_diff > 40){
+					printf("rotate right at speed = 6\n");
+					ri_move(&ri, RI_TURN_RIGHT, 6); 
+				}
+			}
+			ri_move(&ri, RI_MOVE_FORWARD, 5); 
 		}
 		else if (biggest_1 != NULL){
 			printf("\n");
