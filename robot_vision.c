@@ -68,8 +68,19 @@ void get_diff_in_y(squares_t *square1, squares_t *square2){
 
 // Draw an X marker on the image
 int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
-  //code me -> compare areas
-  return 0;
+  //compare areas
+  float ratio;
+  if((square1->area)>(square2->area))
+    ratio = getRatio(square1->area, square2->area);
+  else if((square1->area)<(square2->area))
+    ratio = getRatio(square2->area, square1->area);
+  else 
+    ratio = 1;
+  
+  if(ratio > area_ratio_threshold)
+    return 1;
+  else
+    return 0;
 }
 void draw_green_X(squares_t *s, IplImage *img) {
 	CvPoint pt1, pt2;
