@@ -67,13 +67,20 @@ void get_diff_in_y(squares_t *square1, squares_t *square2){
 }
 
 // Draw an X marker on the image
+
+float getRatio(int x, int y) {  // x>y
+  float ratio = (float)x / (float)y;
+  //printf("Ratio of biggest to next biggest = %f\n", ratio);
+  return ratio;
+}
+
 int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
   //compare areas
   float ratio;
   if((square1->area)>(square2->area))
-    ratio = getRatio(square1->area, square2->area);
+    ratio = getRatio((int)square1->area, (int)square2->area);
   else if((square1->area)<(square2->area))
-    ratio = getRatio(square2->area, square1->area);
+    ratio = getRatio((int)square2->area, (int)square1->area);
   else 
     ratio = 1;
   
@@ -137,11 +144,7 @@ void printAreas(squares_t *squares) {
        }
 }
 
-float getRatio(int x, int y) {  // x>y
-  float ratio = (float)x / (float)y;
-  //printf("Ratio of biggest to next biggest = %f\n", ratio);
-  return ratio;
-}
+
 
 int main(int argv, char **argc) {
 	robot_if_t ri;
