@@ -8,11 +8,11 @@
 
 /* Pink */
 #define RC_PINK		5
-#define RC_PINK_LOW_1	cvScalar(0, 67, 65, 0)	//i got better results with v = 65 rather than 47
-#define RC_PINK_HIGH_1	cvScalar(13, 255, 255, 0)
+#define RC_PINK_LOW_1	cvScalar(0, 75, 75, 0)	//i got better results with v = 65 rather than 47
+#define RC_PINK_HIGH_1	cvScalar(8, 255, 255, 0)
 
-#define RC_PINK_LOW_2	cvScalar(150, 67, 65, 0)
-#define RC_PINK_HIGH_2	cvScalar(190, 255, 255, 0)
+#define RC_PINK_LOW_2	cvScalar(150, 75, 75, 0)
+#define RC_PINK_HIGH_2	cvScalar(180, 255, 255, 0)
 
 /* Yellow */
 #define RC_YELLOW	30

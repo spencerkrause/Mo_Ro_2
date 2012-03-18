@@ -257,7 +257,7 @@ int main(int argv, char **argc) {
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
-		getc(stdin);
+		//getc(stdin);
 	} while(1);
 
 	// Clean up (although we'll never get here...)
