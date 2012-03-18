@@ -70,22 +70,25 @@ void get_diff_in_y(squares_t *square1, squares_t *square2){
 
 float getRatio(int x, int y) {  // x>y
   float ratio = (float)x / (float)y;
-  //printf("Ratio of biggest to next biggest = %f\n", ratio);
+  printf("Area ratio = %f\n", ratio);
   return ratio;
 }
 
 int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
   //compare areas
   float ratio;
-  if((square1->area)>(square2->area))
+  if((square1->area)<(square2->area))
     ratio = getRatio((int)square1->area, (int)square2->area);
-  else if((square1->area)<(square2->area))
+  else if((square1->area)>(square2->area))
     ratio = getRatio((int)square2->area, (int)square1->area);
   else 
     ratio = 1;
   
   if(ratio > area_ratio_threshold)
-    return 1;
+      if(abs((square1->center.x) - (square2->center.x))>=50)//if they're not in the same place ie: the same square
+	return 1;
+      else
+	return 0;
   else
     return 0;
 }
@@ -229,7 +232,8 @@ int main(int argv, char **argc) {
 
 		// Loop over the squares and find the biggest one
 		sq_idx = squares;
-		
+		/*
+		 //find 2 biggest squares: 
 		if(sq_idx != NULL) {
 			printAreas(sq_idx);
 			sq_idx = squares;
@@ -265,21 +269,62 @@ int main(int argv, char **argc) {
 				}
 			}
 		}
-		
+		*/
 		//printf("Drawing the two largest\n");
 		// Only draw if we have 2 biggest squares
+		
+		 //find biggest pair:
+		if(sq_idx != NULL) {
+			printAreas(sq_idx);
+			sq_idx = squares;
+			biggest_1 = squares;
+			
+			if(sq_idx->next != NULL) {
+				//printf("Finding the two largest\n");
+			
+				//iterate through and find the largest square by area. 
+				while(sq_idx != NULL) {
+					if(sq_idx->area > biggest_1->area)
+						biggest_1 = sq_idx;
+					sq_idx = sq_idx->next;
+				}
+				
+				// Iterate through a second time to find second largest
+				sq_idx = squares;
+				
+				if(biggest_1 != squares)
+				  biggest_2 = squares;
+				else if(squares->next!=NULL)
+				  biggest_2 = squares->next;
+				else{
+				  printf("Only one square in list.  Getting out of here.\n");
+				  break;
+				}
+				while(sq_idx != NULL) {
+					same_square = is_same_square(biggest_1, sq_idx);
+					//make sure the same square doesn't get drawn twice
+					if((sq_idx->area > biggest_2->area) && sq_idx != biggest_1 && same_square == false)
+						biggest_2 = sq_idx;
+					sq_idx = sq_idx->next;
+				}
+			}
+		}
 		if(biggest_1 != NULL){
 			draw_green_X(biggest_1, image);
 			printf("Area 1 = %d", biggest_1->area);
 		}
 		if(biggest_1 != NULL && biggest_2 != NULL ) {
-			draw_red_X(biggest_2, image);
+			if(isPair(biggest_1, biggest_2, .675))
+				draw_green_X(biggest_2, image);//draw 2 greens if pair
+			else
+				 draw_red_X(biggest_2, image);//draw a red if not pair
 			printf("\tArea 2 = %d\n", biggest_2->area);
 			
 			//get the difference in distance between the two biggest squares and the center vertical line
 			x_dist_diff = get_square_diffence(biggest_1, biggest_2, image);
 			get_diff_in_y(biggest_1, biggest_2);
 			
+			/*
 			//when the camera can't detect the other biggest square, which means now the second biggest square
 			//is much smaller than the first biggest square
 			if ((biggest_1->area - biggest_2->area) > 500){
@@ -318,6 +363,7 @@ int main(int argv, char **argc) {
 				}
 			}
 			ri_move(&ri, RI_MOVE_FORWARD, 5); 
+			*/
 		}
 		else if (biggest_1 != NULL){
 			printf("\n");
