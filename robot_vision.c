@@ -198,8 +198,6 @@ void printAreas(squares_t *squares) {
        }
 }
 
-
-
 int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor, x_dist_diff;
@@ -284,36 +282,39 @@ int main(int argv, char **argc) {
 		if( squares != NULL ) {
 			printf("Sorting squares!\n");
 			sort_squares(squares);
-			printAreas(sq_idx);
-		}
+			printf("Sort Complete!\n");
+			printAreas(squares);
+			printf("Done printing");
 		
-		if(squares != NULL) biggest_1 = squares;
-		if(squares->next != NULL) biggest_2 = squares->next;
-		
-		//find biggest pair (if it exists)
-		firstOfPair = biggest_1;
-		while(firstOfPair != NULL && firstOfPair->next != NULL){
-			secondOfPair = firstOfPair->next;
-			if(isPair(firstOfPair, secondOfPair, .675)){
-				hasPair = 1;
-				break;
+			//find biggest pair (if it exists)
+			sq_idx = squares;
+			
+			while(sq_idx != NULL){
+				if(sq_idx->next == NULL) break;
+				else if(isPair(sq_idx, sq_idx->next, 0.75)){
+					hasPair = 1;
+					break;
+				}
+				sq_idx = sq_idx->next;
 			}
-			firstOfPair = secondOfPair;
-		}
 		
-		if(hasPair){
-			printf("Pair found.\n");
-			draw_green_X(firstOfPair, image);
-			draw_green_X(secondOfPair, image);
+			printf("Pair ID complete!\n");
+			
+			if(hasPair){
+				printf("Pair found.\n");
+				draw_green_X(sq_idx, image);
+				draw_green_X(sq_idx->next, image);
+			}
+			else {
+				printf("Pair not found.  Marking largest.\n");
+				draw_red_X(squares, image);
+			}
+			hasPair = 0;
 		}
-		else if(biggest_1!=NULL){
-			printf("Pair not found.  Marking largest.\n");
-			draw_red_X(biggest_1, image);
-		}
-		else{
+		else {
 			printf("No squares found.\n");
 		}
-		
+		hasPair = 0;
 		/*
 		if(biggest_1 != NULL){
 			draw_green_X(biggest_1, image);
@@ -394,7 +395,7 @@ int main(int argv, char **argc) {
 		
 		biggest_1 = NULL;
 		biggest_2 = NULL;
-		hasPair = 0;
+		
 
 		// Move forward unless there's something in front of the robot
 		/*if(!ri_IR_Detected(&ri))
