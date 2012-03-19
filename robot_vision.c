@@ -73,9 +73,9 @@ int get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
 	//negative diff means robot pointing to the right of the origin, positive diff means robot pointing to the left of the origin
 	diff = dist_to_center1 + dist_to_center2;
 	
-	printf("square 1 distance = %d\t square 2 distance = %d\t difference in distance = %d\n", 
+	/*printf("square 1 distance = %d\t square 2 distance = %d\t difference in distance = %d\n", 
 	       dist_to_center1, dist_to_center2, diff);
-	
+	*/
 	return diff;
 }
 
@@ -192,8 +192,7 @@ int main(int argv, char **argc) {
 		*pair_square_1, 
 		*pair_square_2, 
 		*sq_idx;
-	bool 	same_square,
-		hasPair = 0,
+	bool 	hasPair = 0,
 		onlyLargest = 0,
 		twoLargest = 0;
 	
@@ -274,7 +273,7 @@ int main(int argv, char **argc) {
 			/* sort squares from largest to smallest */
 			sort_squares(squares);
 			
-			printAreas(squares);
+			//printAreas(squares);
 			
 			//find largest useful pair (if they exist)
 			sq_idx = squares;
@@ -290,13 +289,13 @@ int main(int argv, char **argc) {
 		
 			/* if pair is found, mark them for later use */	
 			if(hasPair){
-				printf("Pair found.\n");
+				//printf("Pair found.\n");
 				
 				pair_square_1 = sq_idx;
 				pair_square_2 = sq_idx->next;
 				
 				draw_X(pair_square_1, image, 0, 255, 0);
-				draw_X(pair_square_2, image, 0, 255, 255);
+				draw_X(pair_square_2, image, 100, 255, 100);
 			}
 			else /* otherwise, mark the largest squares found */
 			{
@@ -316,28 +315,19 @@ int main(int argv, char **argc) {
 				
 				if(sq_idx->next != NULL) {
 					next_largest = sq_idx->next;
-					draw_X(next_largest, image, 255, 255, 0);
+					draw_X(next_largest, image, 255, 100, 100);
 					
 					onlyLargest = 0;
 					twoLargest = 1;
-					printf ("Two Largest Found.\n");
+					//printf ("Two Largest Found.\n");
 				}
-				else printf ("Only Largest Found.\n");
+				//else printf ("Only Largest Found.\n");
 			}
 		}
 		
 		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
 		
-		if (0){ //(square_count == 3){
-			printf("Moving forward, count equals 3\n");
-			ri_move(&ri, RI_MOVE_FORWARD, 5);
-			if (ri_IR_Detected(&ri)) {
-				square_count++;
-				printf("Object detected, square_count = %d\n", square_count);
-			}		
-	
-		}
-		else if(square_count == 4){
+		if(square_count == 4){
 			printf("Rotating\n");
 			
 			if (hasPair){
@@ -349,28 +339,29 @@ int main(int argv, char **argc) {
 		}
 		else{
 			if(hasPair) {
-								
+				printf("Has pair.  ");			
 				//get the difference in distance between each square and the center vertical line
 				x_dist_diff = get_square_diffence(pair_square_1, pair_square_2, image);
 				
 				if (prev_square_area_1 != 0 && prev_square_area_2 != 0 && 
 					pair_square_1->area < prev_square_area_1  && pair_square_2->area < prev_square_area_2 ){
 					square_count++;
-					printf("square count = %d\n", square_count);
+					printf("square count changed.  Now equals %d\n", square_count);
 				}
 				//rotate to the left
 				if (x_dist_diff < -40){
-					printf("Has pair.  Diff < - 40.  rotate left at speed = 6\n");
+					printf("Diff < - 40.  rotate left at speed = 6\n");
 					ri_move(&ri, RI_TURN_LEFT, 6);					
 				}
 				//rotate to the right
 				else if (x_dist_diff > 40){
-					printf("Has pair.  Diff > 40.  rotate right at speed = 6\n");
+					printf("Diff > 40.  rotate right at speed = 6\n");
 					ri_move(&ri, RI_TURN_RIGHT, 6);					
 				}
 				prev_square_area_1 = pair_square_1->area;
 				prev_square_area_2 = pair_square_2->area;
 				
+				printf("Move forward speed = 5\n");				
 				ri_move(&ri, RI_MOVE_FORWARD, 5);
 			}
 			else if(twoLargest) /* when pair not detected, second biggest square is smaller than the first biggest square */
@@ -421,8 +412,19 @@ int main(int argv, char **argc) {
 			}
 			else	/* once the camera can't detect any squares, make the robot go backwards */
 			{
-				printf("No squares found.  Move Backwards\n");
-				ri_move(&ri, RI_MOVE_BACKWARD , 1); 
+				if (square_count == 3){
+					printf("Moving forward, count equals 3\n");
+					ri_move(&ri, RI_MOVE_FORWARD, 5);
+					if (ri_IR_Detected(&ri)) {
+						square_count++;
+						printf("Object detected, square_count = %d\n", square_count);
+					}		
+	
+				}
+				else {
+					printf("No squares found.  Move Backwards\n");
+					ri_move(&ri, RI_MOVE_BACKWARD , 1); 
+				}
 			}
 		}
 
@@ -452,10 +454,7 @@ int main(int argv, char **argc) {
 		onlyLargest = 0;
 		twoLargest = 0;
 
-		// Move forward unless there's something in front of the robot
-		/*if(!ri_IR_Detected(&ri))
-			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
-		//printf("Loop Complete\n");
+		printf("square count = %d\n\n", square_count);
 		getc(stdin);
 	} while(1);
 
