@@ -75,10 +75,9 @@ int get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
 	
 	/*printf("square 1 distance = %d\t square 2 distance = %d\t difference in distance = %d\n", 
 	       dist_to_center1, dist_to_center2, diff);
-	*/
+	
 	return diff;
 }
-
 //checks if the same square gets marked twice
 bool is_same_square(squares_t *square1, squares_t *square2){
 	CvPoint pt1, pt2;
@@ -93,8 +92,6 @@ bool is_same_square(squares_t *square1, squares_t *square2){
 	   
 	return false;
 }
-
-/* Check the differnce in y between two squares */
 int get_diff_in_y(squares_t *square1, squares_t *square2){
 	int y_1, y_2, diff;
 	
@@ -102,39 +99,41 @@ int get_diff_in_y(squares_t *square1, squares_t *square2){
 	y_2 = square2->center.y;
 	
 	diff = abs(y_1 - y_2);
-	//printf("square_1 y = %d\t square_2 y = %d\tdifference in y = %d\n", y_1, y_2, diff);
+	printf("square_1 y = %d\t square_2 y = %d\tdifference in y = %d\n", y_1, y_2, diff);
 	return diff;
 }
 
+// Draw an X marker on the image
+
 float getRatio(int x, int y) {  // x>y
-	float r;
-	
-	if( x < y ) 	r = (float) x / (float) y;
-	else if(x > y)	r = (float) y / (float) x;
-	else 		r = 1.0;
-		
-	//printf("Area ratio = %f\n", r);
-	return r;
+  float ratio = (float)x / (float)y;
+  printf("Area ratio = %f\n", ratio);
+  return ratio;
 }
 
-int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .75
-	//compare areas
-	float ratio;
-	int diff;
-	bool same_square;
-	
-	ratio = getRatio(square1->area, square2->area);
-	
-	diff = get_diff_in_y(square1, square2);
-	
-	same_square = is_same_square(square1, square2);
-	
-	/* if ratio greater than threshold, the difference in y is small, and they are NOT the same square */
-	if( (ratio > area_ratio_threshold ) && ( diff < 25 ) && !same_square )	return 1;
-	else									return 0;
+int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
+  //compare areas
+  float ratio;
+  int diff;
+  
+  if((square1->area)<(square2->area))
+    ratio = getRatio((int)square1->area, (int)square2->area);
+  else if((square1->area)>(square2->area))
+    ratio = getRatio((int)square2->area, (int)square1->area);
+  else 
+    ratio = 1;
+  
+  diff = get_diff_in_y(square1, square2);
+  
+  if(ratio > area_ratio_threshold && diff < 25)
+      if(abs((square1->center.x) - (square2->center.x))>=50)//if they're not in the same place ie: the same square
+	return 1;
+      else
+	return 0;
+  else
+    return 0;
 }
-
-void draw_X(squares_t *s, IplImage *img, int R, int G, int B) {
+void draw_green_X(squares_t *s, IplImage *img) {
 	CvPoint pt1, pt2;
 	int sq_amt = (int) (sqrt(s->area) / 2);	
 
@@ -143,14 +142,33 @@ void draw_X(squares_t *s, IplImage *img, int R, int G, int B) {
 	pt1.y = s->center.y - sq_amt;
 	pt2.x = s->center.x + sq_amt;
 	pt2.y = s->center.y + sq_amt;
-	cvLine(img, pt1, pt2, CV_RGB(R, G, B), 3, CV_AA, 0);
+	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
 
 	// Lower Left to Upper Right
 	pt1.x = s->center.x - sq_amt;
 	pt1.y = s->center.y + sq_amt;
 	pt2.x = s->center.x + sq_amt;
 	pt2.y = s->center.y - sq_amt;
-	cvLine(img, pt1, pt2, CV_RGB(R, G, B), 3, CV_AA, 0);
+	cvLine(img, pt1, pt2, CV_RGB(0, 255, 0), 3, CV_AA, 0);
+}
+
+void draw_red_X(squares_t *s, IplImage *img) {
+	CvPoint pt1, pt2;
+	int sq_amt = (int) (sqrt(s->area) / 2);	
+
+	// Upper Left to Lower Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y - sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y + sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(255, 0, 0), 3, CV_AA, 0);
+
+	// Lower Left to Upper Right
+	pt1.x = s->center.x - sq_amt;
+	pt1.y = s->center.y + sq_amt;
+	pt2.x = s->center.x + sq_amt;
+	pt2.y = s->center.y - sq_amt;
+	cvLine(img, pt1, pt2, CV_RGB(255, 0, 0), 3, CV_AA, 0);
 }
 
 void draw_vertical_line(IplImage *img){
@@ -162,45 +180,32 @@ void draw_vertical_line(IplImage *img){
 	
 	cvLine(img, pt1, pt2, CV_RGB(0, 60, 255), 3, CV_AA, 0);
 }
-
-/* print out list of square areas */
 void printAreas(squares_t *squares) {
-	squares_t *sq_idx;
-	printf("Areas of squares: \n");
-	
-	sq_idx = squares;
-	while(sq_idx != NULL) {
-               printf("  %d\n", sq_idx->area);
-               sq_idx = sq_idx->next;
+       printf("Areas of squares: \n");
+       while(squares != NULL) {
+               printf("  %d\n", squares->area);
+               squares = squares->next;
        }
 }
 
 int main(int argv, char **argc) {
 	robot_if_t ri;
-	int 	x_dist_diff, 
-		square_count = 0, 
-		prev_square_area_1 = 0, 
-		prev_square_area_2 = 0;
-	IplImage *image = NULL, 
-		*hsv = NULL, 
-		*threshold_1 = NULL, 
-		*threshold_2 = NULL, 
-		*final_threshold = NULL;
-	squares_t *squares, 
-		*largest,
-		*next_largest,
-		*pair_square_1, 
-		*pair_square_2, 
-		*sq_idx;
-	bool 	hasPair = 0,
-		onlyLargest = 0,
-		twoLargest = 0;
+	int major, minor, x_dist_diff, square_count, prev_square_area_1 = 0, prev_square_area_2 = 0;
+	IplImage *image = NULL, *hsv = NULL, *threshold_1 = NULL, *threshold_2 = NULL, *final_threshold = NULL;
+	squares_t *squares, *biggest_1, *biggest_2, , *pair_square_1, *pair_square_2, *sq_idx;
+	bool same_square;
+	bool hasPair = 0;
+	
+	square_count = 0;
 	
 	// Make sure we have a valid command line argument
 	if(argv <= 1) {
 		printf("Usage: robot_test <address of robot>\n");	
 		exit(-1);
 	}
+
+	ri_api_version(&major, &minor);
+	printf("Robot API Test: API Version v%i.%i\n", major, minor);
 
 	// Setup the robot with the address passed in
 	if(ri_setup(&ri, argc[1], 0)) {
@@ -216,7 +221,7 @@ int main(int argv, char **argc) {
 
 	// Create a window to display the output
 	//cvNamedWindow("Rovio Camera", CV_WINDOW_AUTOSIZE);
-	cvNamedWindow("Square Display", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("Biggest Square", CV_WINDOW_AUTOSIZE);
 	cvNamedWindow("Thresholded", CV_WINDOW_AUTOSIZE);
 
 	// Create an image to store the image from the camera
@@ -242,12 +247,11 @@ int main(int argv, char **argc) {
 			continue;
 		}
 
-		// Get the current camera image
+		// Get the current camera image and display it
 		if(ri_get_image(&ri, image) != RI_RESP_SUCCESS) {
 			printf("Unable to capture an image!\n");
 			continue;
 		}
-		/* for testing */
 		//cvShowImage("Rovio Camera", image);
 
 		// Convert the image from RGB to HSV
@@ -262,20 +266,20 @@ int main(int argv, char **argc) {
 		// compute the final threshold image by using cvOr
 		cvOr(threshold_1, threshold_2, final_threshold, NULL);
 		
-		/* show final thresholded image for testing */
+
 		cvShowImage("Thresholded", final_threshold);
 		
 		// Find the squares in the image
 		squares = ri_find_squares(final_threshold, RI_DEFAULT_SQUARE_SIZE);
 		
-		/* If any squares are found */
 		if( squares != NULL ) {
-			/* sort squares from largest to smallest */
+			printf("Sorting squares!\n");
 			sort_squares(squares);
-			
-			//printAreas(squares);
-			
-			//find largest useful pair (if they exist)
+			printf("Sort Complete!\n");
+			printAreas(squares);
+			printf("Done printing");
+		
+			//find biggest pair (if it exists)
 			sq_idx = squares;
 			
 			while(sq_idx != NULL){
@@ -287,50 +291,52 @@ int main(int argv, char **argc) {
 				sq_idx = sq_idx->next;
 			}
 		
-			/* if pair is found, mark them for later use */	
+			printf("Pair ID complete!\n");
+			
 			if(hasPair){
-				//printf("Pair found.\n");
+				printf("Pair found.\n");
+				//draw_green_X(sq_idx, image);
+				//draw_green_X(sq_idx->next, image);
+				biggest_1 = sq_idx;
+				biggest_2 = sq_idx->next;
 				
-				pair_square_1 = sq_idx;
-				pair_square_2 = sq_idx->next;
 				
-				draw_X(pair_square_1, image, 0, 255, 0);
-				draw_X(pair_square_2, image, 100, 255, 100);
+				
 			}
-			else /* otherwise, mark the largest squares found */
-			{
-				largest = squares;
-				onlyLargest = 1;
-				draw_X(largest, image, 255, 0, 0);
+			else {
+				printf("Pair not found.  Marking largest.\n");
+				draw_red_X(squares, image);
 				
-				sq_idx = squares;
-				
-				while(sq_idx != NULL){
-					if(sq_idx->next == NULL) break;
-					else if(!is_same_square(sq_idx, sq_idx->next) ){
-						break;
-					}
-					sq_idx = sq_idx->next;
-				}
-				
-				if(sq_idx->next != NULL) {
-					next_largest = sq_idx->next;
-					draw_X(next_largest, image, 255, 100, 100);
-					
-					onlyLargest = 0;
-					twoLargest = 1;
-					//printf ("Two Largest Found.\n");
-				}
-				//else printf ("Only Largest Found.\n");
+				//temporary:
+				biggest_1 = squares;
+				biggest_2 = squares;
 			}
+			hasPair = 0;
+		}
+		else {
+			printf("No squares found.\n");
+		}
+		
+		hasPair = 0;
+		
+		if(biggest_1 != NULL){
+			draw_green_X(biggest_1, image);
+			printf("Area 1 = %d", biggest_1->area);
 		}
 		
 		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
-		
-		if(square_count == 4){
+		if (square_count == 3){	
+			ri_move(&ri, RI_MOVE_FORWARD, 1);
+			if (ri_IR_Detected(&ri)) {
+				square_count++;
+				printf("Object detected, square_count = %d\n", square_count);
+			}		
+	
+		}
+		else if(square_count == 4){
 			printf("Rotating\n");
 			
-			if (hasPair){
+			if (biggest_1 != NULL && biggest_2 != NULL && (biggest_1->area - biggest_2->area) < 500){
 				square_count++;
 				printf("New Path Found\n");
 			}
@@ -338,93 +344,73 @@ int main(int argv, char **argc) {
 			
 		}
 		else{
-			if(hasPair) {
-				printf("Has pair.  ");			
-				//get the difference in distance between each square and the center vertical line
-				x_dist_diff = get_square_diffence(pair_square_1, pair_square_2, image);
+			/*
+			 * 	If we only find a single usable largest square:
+			 * 		if square is on left of screen, turn right, strafe right
+			 * 		if square is on right of screen, turn left, strafe left
+			 */	
+			
+			
+			
+			if(biggest_1 != NULL && biggest_2 != NULL ) {
+				draw_red_X(biggest_2, image);
+				printf("\tArea 2 = %d\n", biggest_2->area);
 				
-				if (prev_square_area_1 != 0 && prev_square_area_2 != 0 && 
-					pair_square_1->area < prev_square_area_1  && pair_square_2->area < prev_square_area_2 ){
-					square_count++;
-					printf("square count changed.  Now equals %d\n", square_count);
-				}
-				//rotate to the left
-				if (x_dist_diff < -40){
-					printf("Diff < - 40.  rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 6);					
-				}
-				//rotate to the right
-				else if (x_dist_diff > 40){
-					printf("Diff > 40.  rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 6);					
-				}
-				prev_square_area_1 = pair_square_1->area;
-				prev_square_area_2 = pair_square_2->area;
+				//get the difference in distance between the two biggest squares and the center vertical line
+				x_dist_diff = get_square_diffence(biggest_1, biggest_2, image);
+				get_diff_in_y(biggest_1, biggest_2);
 				
-				printf("Move forward speed = 5\n");				
-				ri_move(&ri, RI_MOVE_FORWARD, 5);
-			}
-			else if(twoLargest) /* when pair not detected, second biggest square is smaller than the first biggest square */
-			{
-				if ((largest->area - next_largest->area) > 500){
+				//when the camera can't detect the other biggest square, which means now the second biggest square
+				//is much smaller than the first biggest square
+				if ((biggest_1->area - biggest_2->area) > 500){
 					//if both squares are at the left side of the center line
-					if (largest->center.x < image->width/2 && next_largest->center.x < image->width/2){
-						printf("Both squares left of center line.  rotate right at speed = 6\n");
-						ri_move(&ri, RI_TURN_RIGHT, 6);
-						ri_move(&ri, RI_STOP, 1);
+					if (biggest_1->center.x < image->width/2 && biggest_2->center.x < image->width/2){
+						printf("rotate right at speed = 6\n");
+						ri_move(&ri, RI_TURN_RIGHT, 6); 
 					}
 					//if both squares are at the right side of the center line
-					else if (largest->center.x > image->width/2 && next_largest->center.x > image->width/2){
-						printf("Both squares right of center line.  rotate left at speed = 6\n");
+					else if (biggest_1->center.x > image->width/2 && biggest_2->center.x > image->width/2){
+						printf("rotate left at speed = 6\n");
 						ri_move(&ri, RI_TURN_LEFT, 6); 
-						ri_move(&ri, RI_STOP, 1);
 					}
 					//if the center line is in the middle of the two biggest squares
-					else if (largest->center.x < image->width/2 && next_largest->center.x > image->width/2 ){
-						printf("Center in middle of twoLargest on left.  rotate right at speed = 6\n");
-						ri_move(&ri, RI_TURN_RIGHT, 4);
-						ri_move(&ri, RI_STOP, 1);
+					else if (biggest_1->center.x < image->width/2 && biggest_2->center.x > image->width/2 ){
+						printf("rotate right at speed = 2\n");
+						ri_move(&ri, RI_TURN_RIGHT, 2); 
+						
 					}
 					else{
-						printf("Center in middle of twoLargest on right.  rotate left at speed = 6\n");
-						ri_move(&ri, RI_TURN_LEFT, 4);
-						ri_move(&ri, RI_STOP, 1);
+						printf("rotate left at speed = 2\n");
+						ri_move(&ri, RI_TURN_LEFT, 2); 
 					}
 					
 				}
-			}
-			else if(onlyLargest) /* If we only find a single usable largest square */
-			{
-			 	//if both squares are at the left side of the center line
-				if (largest->center.x < image->width/2){
-					printf("Only Largest Found on left.  rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 6);
-					ri_move(&ri, RI_MOVE_FWD_RIGHT, 6);
-					ri_move(&ri, RI_STOP, 1);
-				}
-				//if both squares are at the right side of the center line
-				else if (largest->center.x > image->width/2){
-					printf("Only Largest Found on right.  rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 6);
-					ri_move(&ri, RI_MOVE_FWD_LEFT, 6);
-					ri_move(&ri, RI_STOP, 1);
-				}			 
-			}
-			else	/* once the camera can't detect any squares, make the robot go backwards */
-			{
-				if (square_count == 3){
-					printf("Moving forward, count equals 3\n");
-					ri_move(&ri, RI_MOVE_FORWARD, 5);
-					if (ri_IR_Detected(&ri)) {
+				else{
+					if (prev_square_area_1 != 0 && prev_square_area_2 != 0 && 
+						biggest_1->area < prev_square_area_1  && biggest_2->area < prev_square_area_2 ){
 						square_count++;
-						printf("Object detected, square_count = %d\n", square_count);
-					}		
-	
+						printf("square count = %d\n", square_count);
+					}
+					//rotate to the left
+					if (x_dist_diff < -40){
+						printf("rotate left at speed = 6\n");
+						ri_move(&ri, RI_TURN_LEFT, 6); 
+					}
+					//rotate to the right
+					else if (x_dist_diff > 40){
+						printf("rotate right at speed = 6\n");
+						ri_move(&ri, RI_TURN_RIGHT, 6);
+					}
+					prev_square_area_1 = biggest_1->area;
+					prev_square_area_2 = biggest_2->area;
+					
 				}
-				else {
-					printf("No squares found.  Move Backwards\n");
-					ri_move(&ri, RI_MOVE_BACKWARD , 1); 
-				}
+				ri_move(&ri, RI_MOVE_FORWARD, 5);
+			}
+			//once the camera can't detect any squares, make the robot go backwards
+			else if (biggest_1 == NULL && biggest_2 == NULL){
+				printf("Move Backwards\n");
+				ri_move(&ri, RI_MOVE_BACKWARD , 1); 
 			}
 		}
 
@@ -432,35 +418,31 @@ int main(int argv, char **argc) {
 		draw_vertical_line(image);
 		
 		// Display the image with the drawing oon ito
-		cvShowImage("Square Display", image);
+		cvShowImage("Biggest Square", image);
 		
 		// Update the UI (10ms wait)
 		cvWaitKey(10);
 	
 		// Release the square data
-		while(squares != NULL) 
-		{
+		while(squares != NULL) {
+			
 			sq_idx = squares->next;
 			free(squares);
 			squares = sq_idx;	
 		}
-		
-		/* reset loop control variables */
-		pair_square_1 = NULL;
-		pair_square_2 = NULL;
-		largest = NULL;
-		next_largest = NULL;
-		hasPair = 0;
-		onlyLargest = 0;
-		twoLargest = 0;
+		biggest_1 = NULL;
+		biggest_2 = NULL;
 
-		printf("square count = %d\n\n", square_count);
-		getc(stdin);
+		// Move forward unless there's something in front of the robot
+		/*if(!ri_IR_Detected(&ri))
+			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
+		//printf("Loop Complete\n");
+		//getc(stdin);
 	} while(1);
 
 	// Clean up (although we'll never get here...)
 	//cvDestroyWindow("Rovio Camera");
-	cvDestroyWindow("Square Display");
+	cvDestroyWindow("Biggest Square");
 	cvDestroyWindow("Thresholded");
 	
 	// Free the images
