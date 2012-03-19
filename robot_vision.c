@@ -327,8 +327,10 @@ int main(int argv, char **argc) {
 		}
 		
 		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
-		if (square_count == 3){	
-			ri_move(&ri, RI_MOVE_FORWARD, 1);
+		
+		if (0){ //(square_count == 3){
+			printf("Moving forward, count equals 3\n");
+			ri_move(&ri, RI_MOVE_FORWARD, 5);
 			if (ri_IR_Detected(&ri)) {
 				square_count++;
 				printf("Object detected, square_count = %d\n", square_count);
@@ -358,13 +360,13 @@ int main(int argv, char **argc) {
 				}
 				//rotate to the left
 				if (x_dist_diff < -40){
-					printf("rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 6); 
+					printf("Has pair.  Diff < - 40.  rotate left at speed = 6\n");
+					ri_move(&ri, RI_TURN_LEFT, 6);					
 				}
 				//rotate to the right
 				else if (x_dist_diff > 40){
-					printf("rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 6);
+					printf("Has pair.  Diff > 40.  rotate right at speed = 6\n");
+					ri_move(&ri, RI_TURN_RIGHT, 6);					
 				}
 				prev_square_area_1 = pair_square_1->area;
 				prev_square_area_2 = pair_square_2->area;
@@ -376,23 +378,26 @@ int main(int argv, char **argc) {
 				if ((largest->area - next_largest->area) > 500){
 					//if both squares are at the left side of the center line
 					if (largest->center.x < image->width/2 && next_largest->center.x < image->width/2){
-						printf("rotate right at speed = 6\n");
-						ri_move(&ri, RI_TURN_RIGHT, 6); 
+						printf("Both squares left of center line.  rotate right at speed = 6\n");
+						ri_move(&ri, RI_TURN_RIGHT, 6);
+						ri_move(&ri, RI_STOP, 1);
 					}
 					//if both squares are at the right side of the center line
 					else if (largest->center.x > image->width/2 && next_largest->center.x > image->width/2){
-						printf("rotate left at speed = 6\n");
+						printf("Both squares right of center line.  rotate left at speed = 6\n");
 						ri_move(&ri, RI_TURN_LEFT, 6); 
+						ri_move(&ri, RI_STOP, 1);
 					}
 					//if the center line is in the middle of the two biggest squares
 					else if (largest->center.x < image->width/2 && next_largest->center.x > image->width/2 ){
-						printf("rotate right at speed = 2\n");
-						ri_move(&ri, RI_TURN_RIGHT, 2); 
-						
+						printf("Center in middle of twoLargest on left.  rotate right at speed = 6\n");
+						ri_move(&ri, RI_TURN_RIGHT, 4);
+						ri_move(&ri, RI_STOP, 1);
 					}
 					else{
-						printf("rotate left at speed = 2\n");
-						ri_move(&ri, RI_TURN_LEFT, 2); 
+						printf("Center in middle of twoLargest on right.  rotate left at speed = 6\n");
+						ri_move(&ri, RI_TURN_LEFT, 4);
+						ri_move(&ri, RI_STOP, 1);
 					}
 					
 				}
@@ -401,20 +406,22 @@ int main(int argv, char **argc) {
 			{
 			 	//if both squares are at the left side of the center line
 				if (largest->center.x < image->width/2){
-					printf("rotate right at speed = 6\n");
+					printf("Only Largest Found on left.  rotate right at speed = 6\n");
 					ri_move(&ri, RI_TURN_RIGHT, 6);
-					ri_move(&ri, RI_MOVE_RIGHT, 6);
+					ri_move(&ri, RI_MOVE_FWD_RIGHT, 6);
+					ri_move(&ri, RI_STOP, 1);
 				}
 				//if both squares are at the right side of the center line
 				else if (largest->center.x > image->width/2){
-					printf("rotate left at speed = 6\n");
+					printf("Only Largest Found on right.  rotate left at speed = 6\n");
 					ri_move(&ri, RI_TURN_LEFT, 6);
-					ri_move(&ri, RI_MOVE_LEFT, 6);
+					ri_move(&ri, RI_MOVE_FWD_LEFT, 6);
+					ri_move(&ri, RI_STOP, 1);
 				}			 
 			}
 			else	/* once the camera can't detect any squares, make the robot go backwards */
 			{
-				printf("Move Backwards\n");
+				printf("No squares found.  Move Backwards\n");
 				ri_move(&ri, RI_MOVE_BACKWARD , 1); 
 			}
 		}
