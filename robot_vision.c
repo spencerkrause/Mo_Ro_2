@@ -17,11 +17,7 @@
  * 
  */
 
-#include "robot_if.h"
-#include "robot_color.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "robot_vision.h"
 
 void sort_squares(squares_t *squares) {
 	squares_t *sq_idx, 
@@ -193,7 +189,7 @@ int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor, x_dist_diff, square_count, prev_square_area_1 = 0, prev_square_area_2 = 0;
 	IplImage *image = NULL, *hsv = NULL, *threshold_1 = NULL, *threshold_2 = NULL, *final_threshold = NULL;
-	squares_t *squares, *biggest_1, *biggest_2, , *pair_square_1, *pair_square_2, *sq_idx;
+	squares_t *squares, *biggest_1, *biggest_2, *pair_square_1, *pair_square_2, *sq_idx;
 	bool same_square;
 	bool hasPair = 0;
 	
@@ -282,7 +278,7 @@ int main(int argv, char **argc) {
 		
 			//find biggest pair (if it exists)
 			sq_idx = squares;
-			
+			hasPair = 0;
 			while(sq_idx != NULL){
 				if(sq_idx->next == NULL) break;
 				else if(isPair(sq_idx, sq_idx->next, 0.75)){
@@ -312,13 +308,13 @@ int main(int argv, char **argc) {
 				biggest_1 = squares;
 				biggest_2 = squares;
 			}
-			hasPair = 0;
+			
 		}
 		else {
 			printf("No squares found.\n");
 		}
 		
-		hasPair = 0;
+		
 		
 		if(biggest_1 != NULL){
 			draw_green_X(biggest_1, image);
@@ -326,24 +322,76 @@ int main(int argv, char **argc) {
 		}
 		
 		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
-		if (square_count == 3){	
-			ri_move(&ri, RI_MOVE_FORWARD, 1);
-			if (ri_IR_Detected(&ri)) {
-				square_count++;
-				printf("Object detected, square_count = %d\n", square_count);
-			}		
+		if (hasPair && squares->next->next == NULL && square_count>=6){	//if has pair and only 2 squares in list
+			printf("Detected end of corridor\n");
+			while(!ri_IR_Detected(&ri)){
+				ri_update(&ri);
+				ri_move(&ri, RI_MOVE_FORWARD, 8);
+			}
+			ri_move(&ri, RI_STOP, 1);
+			//if (ri_IR_Detected(&ri)) {
+				//square_count++;
+				printf("turning!\n");
+				do{
+				  // Get the current camera image and display it
+					if(ri_get_image(&ri, image) != RI_RESP_SUCCESS) {
+						printf("Unable to capture an image!\n");
+						continue;
+					}
+					//cvShowImage("Rovio Camera", image);
+
+					// Convert the image from RGB to HSV
+					cvCvtColor(image, hsv, CV_BGR2HSV);
+
+					// Pick out the first range of pink color from the image
+					cvInRangeS(hsv, RC_PINK_LOW_1, RC_PINK_HIGH_1, threshold_1);
+					
+					// Pick out the second range of pink color from the image
+					cvInRangeS(hsv, RC_PINK_LOW_2, RC_PINK_HIGH_2, threshold_2);
+					
+					// compute the final threshold image by using cvOr
+					cvOr(threshold_1, threshold_2, final_threshold, NULL);
+		
+
+					cvShowImage("Thresholded", final_threshold);
+					squares = ri_find_squares(final_threshold, RI_DEFAULT_SQUARE_SIZE);
+					if (squares!=NULL){
+						sort_squares(squares);
+						sq_idx = squares;
+						hasPair = 0;
+						while(sq_idx != NULL){
+							if(sq_idx->next == NULL) break;
+							else if(isPair(sq_idx, sq_idx->next, 0.75)){
+								hasPair = 1;
+								biggest_1 = sq_idx;
+								biggest_2 = sq_idx->next;
+								break;
+							}
+							
+							sq_idx = sq_idx->next;
+							if(hasPair){
+								ri_move(&ri, RI_STOP, 1); 
+								break;
+							}
+							else{
+								ri_move(&ri, RI_TURN_RIGHT, 7);
+								ri_move(&ri, RI_STOP, 1); 
+							}
+						}
+					}
+				}while(!hasPair);
+				
+			//}		
 	
-		}
-		else if(square_count == 4){
-			printf("Rotating\n");
-			
+			/*
 			if (biggest_1 != NULL && biggest_2 != NULL && (biggest_1->area - biggest_2->area) < 500){
 				square_count++;
 				printf("New Path Found\n");
-			}
-			ri_move(&ri, RI_TURN_RIGHT, 7); 
+			}*/
+			
 			
 		}
+		
 		else{
 			/*
 			 * 	If we only find a single usable largest square:
@@ -363,16 +411,18 @@ int main(int argv, char **argc) {
 				
 				//when the camera can't detect the other biggest square, which means now the second biggest square
 				//is much smaller than the first biggest square
-				if ((biggest_1->area - biggest_2->area) > 500){
+				if (!hasPair){
 					//if both squares are at the left side of the center line
 					if (biggest_1->center.x < image->width/2 && biggest_2->center.x < image->width/2){
-						printf("rotate right at speed = 6\n");
-						ri_move(&ri, RI_TURN_RIGHT, 6); 
+						printf("strafe right at speed = 7\n");
+						ri_move(&ri, RI_MOVE_RIGHT, 7); 
+						ri_move(&ri, RI_STOP, 1); 
 					}
 					//if both squares are at the right side of the center line
 					else if (biggest_1->center.x > image->width/2 && biggest_2->center.x > image->width/2){
-						printf("rotate left at speed = 6\n");
-						ri_move(&ri, RI_TURN_LEFT, 6); 
+						printf("strafe left at speed = 7\n");
+						ri_move(&ri, RI_MOVE_LEFT, 7);
+						ri_move(&ri, RI_STOP, 1); 
 					}
 					//if the center line is in the middle of the two biggest squares
 					else if (biggest_1->center.x < image->width/2 && biggest_2->center.x > image->width/2 ){
@@ -393,14 +443,16 @@ int main(int argv, char **argc) {
 						printf("square count = %d\n", square_count);
 					}
 					//rotate to the left
-					if (x_dist_diff < -40){
-						printf("rotate left at speed = 6\n");
-						ri_move(&ri, RI_TURN_LEFT, 6); 
+					if (x_dist_diff < -30){
+						printf("rotate left at speed = 7\n");
+						ri_move(&ri, RI_TURN_LEFT, 7);
+						ri_move(&ri, RI_STOP, 1); 
 					}
 					//rotate to the right
-					else if (x_dist_diff > 40){
-						printf("rotate right at speed = 6\n");
-						ri_move(&ri, RI_TURN_RIGHT, 6);
+					else if (x_dist_diff > 30){
+						printf("rotate right at speed = 7\n");
+						ri_move(&ri, RI_TURN_RIGHT, 7);
+						ri_move(&ri, RI_STOP, 1); 
 					}
 					prev_square_area_1 = biggest_1->area;
 					prev_square_area_2 = biggest_2->area;
