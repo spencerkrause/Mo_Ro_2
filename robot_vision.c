@@ -75,6 +75,7 @@ int get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
 	
 	/*printf("square 1 distance = %d\t square 2 distance = %d\t difference in distance = %d\n", 
 	       dist_to_center1, dist_to_center2, diff);
+	 */
 	
 	return diff;
 }
