@@ -43,7 +43,10 @@ void sort_squares(squares_t *squares) {
 	          *counter;
 	int temp;
 	
-	if (squares == NULL) return;
+	if (squares == NULL) {
+		printf("List does not exist\n\n");
+		return;
+	}
 	
 	sq_idx = squares;
 	for(; sq_idx->next != NULL; sq_idx = sq_idx->next)
@@ -201,8 +204,8 @@ int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor, x_dist_diff;
 	IplImage *image = NULL, *hsv = NULL, *threshold_1 = NULL, *threshold_2 = NULL, *final_threshold = NULL;
-	squares_t *squares, *biggest_1 = NULL, *biggest_2 = NULL, *sq_idx;
-	bool same_square;
+	squares_t *squares = NULL, *biggest_1 = NULL, *biggest_2 = NULL, *sq_idx, *firstOfPair = NULL, *secondOfPair = NULL;
+	bool same_square, hasPair = 0;
 	
 	// Make sure we have a valid command line argument
 	if(argv <= 1) {
@@ -278,18 +281,46 @@ int main(int argv, char **argc) {
 		// Find the squares in the image
 		squares = ri_find_squares(final_threshold, RI_DEFAULT_SQUARE_SIZE);
 		
-		printf("Sorting squares!\n");
-		sort_squares(squares);
-		printAreas(sq_idx);
+		if( squares != NULL ) {
+			printf("Sorting squares!\n");
+			sort_squares(squares);
+			printAreas(sq_idx);
+		}
 		
 		if(squares != NULL) biggest_1 = squares;
 		if(squares->next != NULL) biggest_2 = squares->next;
 		
+		//find biggest pair (if it exists)
+		firstOfPair = biggest_1;
+		while(firstOfPair != NULL && firstOfPair->next != NULL){
+			secondOfPair = firstOfPair->next;
+			if(isPair(firstOfPair, secondOfPair, .675)){
+				hasPair = 1;
+				break;
+			}
+			firstOfPair = secondOfPair;
+		}
+		
+		if(hasPair){
+			printf("Pair found.\n");
+			draw_green_X(firstOfPair, image);
+			draw_green_X(secondOfPair, image);
+		}
+		else if(biggest_1!=NULL){
+			printf("Pair not found.  Marking largest.\n");
+			draw_red_X(biggest_1, image);
+		}
+		else{
+			printf("No squares found.\n");
+		}
+		
+		/*
 		if(biggest_1 != NULL){
 			draw_green_X(biggest_1, image);
 			printf("Area 1 = %d", biggest_1->area);
 		}
 		if(biggest_1 != NULL && biggest_2 != NULL ) {
+			
 			if(isPair(biggest_1, biggest_2, .675))
 				draw_green_X(biggest_2, image);//draw 2 greens if pair
 			else
@@ -339,11 +370,11 @@ int main(int argv, char **argc) {
 				}
 			}
 			ri_move(&ri, RI_MOVE_FORWARD, 5); 
-			*/
+			
 		}
 		else if (biggest_1 != NULL){
 			printf("\n");
-		}
+		}*/
 		
 		// display a straight vertical line
 		draw_vertical_line(image);
@@ -363,6 +394,7 @@ int main(int argv, char **argc) {
 		
 		biggest_1 = NULL;
 		biggest_2 = NULL;
+		hasPair = 0;
 
 		// Move forward unless there's something in front of the robot
 		/*if(!ri_IR_Detected(&ri))
