@@ -12,5 +12,5 @@ robot_vision: robot_vision.c
 	gcc ${CFLAGS} -o robot_vision robot_vision.o ${LIB_FLAGS} ${LIB_LINK}
 
 clean:
-	rm -rf *.o *~
+	rm -rf *.o *~ *.orig
 	rm -rf ${PROGS}

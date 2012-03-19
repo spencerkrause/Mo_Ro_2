@@ -23,6 +23,42 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+void sort_squares(squares_t *squares) {
+	squares_t *sq_idx, 
+	          *counter;
+	int temp;
+	
+	if (squares == NULL) {
+		printf("List does not exist\n\n");
+		return;
+	}
+	
+	sq_idx = squares;
+	for(; sq_idx->next != NULL; sq_idx = sq_idx->next)
+	{
+		for(counter = sq_idx->next; counter != NULL; counter = counter->next)
+		{
+			if(sq_idx->area < counter->area)
+			{
+				/* swap areas */
+				temp = sq_idx->area;
+				sq_idx->area = counter->area;
+				counter->area = temp;
+				
+				/* swap center.x */
+				temp = sq_idx->center.x;
+				sq_idx->center.x = counter->center.x;
+				counter->center.x = temp;
+				
+				/* swap center.y */
+				temp = sq_idx->center.y;
+				sq_idx->center.y = counter->center.y;
+				counter->center.y = temp;
+			}
+		}
+	}  
+}
+
 //compute the difference in distance between the biggest two squares and the center vertical line
 int get_square_diffence(squares_t *square1, squares_t *square2, IplImage *img){
 	CvPoint pt1, pt2;
@@ -56,20 +92,46 @@ bool is_same_square(squares_t *square1, squares_t *square2){
 	   
 	return false;
 }
-void get_diff_in_y(squares_t *square1, squares_t *square2){
+int get_diff_in_y(squares_t *square1, squares_t *square2){
 	int y_1, y_2, diff;
 	
 	y_1 = square1->center.y;
 	y_2 = square2->center.y;
 	
-	diff = y_1 - y_2;
+	diff = abs(y_1 - y_2);
 	printf("square_1 y = %d\t square_2 y = %d\tdifference in y = %d\n", y_1, y_2, diff);
+	return diff;
 }
 
 // Draw an X marker on the image
+
+float getRatio(int x, int y) {  // x>y
+  float ratio = (float)x / (float)y;
+  printf("Area ratio = %f\n", ratio);
+  return ratio;
+}
+
 int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
-  //code me -> compare areas
-  return 0;
+  //compare areas
+  float ratio;
+  int diff;
+  
+  if((square1->area)<(square2->area))
+    ratio = getRatio((int)square1->area, (int)square2->area);
+  else if((square1->area)>(square2->area))
+    ratio = getRatio((int)square2->area, (int)square1->area);
+  else 
+    ratio = 1;
+  
+  diff = get_diff_in_y(square1, square2);
+  
+  if(ratio > area_ratio_threshold && diff < 25)
+      if(abs((square1->center.x) - (square2->center.x))>=50)//if they're not in the same place ie: the same square
+	return 1;
+      else
+	return 0;
+  else
+    return 0;
 }
 void draw_green_X(squares_t *s, IplImage *img) {
 	CvPoint pt1, pt2;
@@ -126,18 +188,13 @@ void printAreas(squares_t *squares) {
        }
 }
 
-float getRatio(int x, int y) {  // x>y
-  float ratio = (float)x / (float)y;
-  //printf("Ratio of biggest to next biggest = %f\n", ratio);
-  return ratio;
-}
-
 int main(int argv, char **argc) {
 	robot_if_t ri;
 	int major, minor, x_dist_diff, square_count, prev_square_area_1 = 0, prev_square_area_2 = 0;
 	IplImage *image = NULL, *hsv = NULL, *threshold_1 = NULL, *threshold_2 = NULL, *final_threshold = NULL;
-	squares_t *squares, *biggest_1, *biggest_2, *sq_idx;
+	squares_t *squares, *biggest_1, *biggest_2, , *pair_square_1, *pair_square_2, *sq_idx;
 	bool same_square;
+	bool hasPair = 0;
 	
 	square_count = 0;
 	
@@ -214,48 +271,54 @@ int main(int argv, char **argc) {
 		
 		// Find the squares in the image
 		squares = ri_find_squares(final_threshold, RI_DEFAULT_SQUARE_SIZE);
-
-		// Loop over the squares and find the biggest one
-		sq_idx = squares;
 		
-		if(sq_idx != NULL) {
-			printAreas(sq_idx);
+		if( squares != NULL ) {
+			printf("Sorting squares!\n");
+			sort_squares(squares);
+			printf("Sort Complete!\n");
+			printAreas(squares);
+			printf("Done printing");
+		
+			//find biggest pair (if it exists)
 			sq_idx = squares;
-			biggest_1 = squares;
 			
-			if(sq_idx->next != NULL) {
-				//printf("Finding the two largest\n");
-			
-				//iterate through and find the largest square by area. 
-				while(sq_idx != NULL) {
-					if(sq_idx->area > biggest_1->area)
-						biggest_1 = sq_idx;
-					sq_idx = sq_idx->next;
+			while(sq_idx != NULL){
+				if(sq_idx->next == NULL) break;
+				else if(isPair(sq_idx, sq_idx->next, 0.75)){
+					hasPair = 1;
+					break;
 				}
-				
-				// Iterate through a second time to find second largest
-				sq_idx = squares;
-				
-				if(biggest_1 != squares)
-				  biggest_2 = squares;
-				else if(squares->next!=NULL)
-				  biggest_2 = squares->next;
-				else{
-				  printf("Only one square in list.  Getting out of here.\n");
-				  break;
-				}
-				while(sq_idx != NULL) {
-					same_square = is_same_square(biggest_1, sq_idx);
-					//make sure the same square doesn't get drawn twice
-					if((sq_idx->area > biggest_2->area) && sq_idx != biggest_1 && same_square == false)
-						biggest_2 = sq_idx;
-					sq_idx = sq_idx->next;
-				}
+				sq_idx = sq_idx->next;
 			}
+		
+			printf("Pair ID complete!\n");
+			
+			if(hasPair){
+				printf("Pair found.\n");
+				//draw_green_X(sq_idx, image);
+				//draw_green_X(sq_idx->next, image);
+				biggest_1 = sq_idx;
+				biggest_2 = sq_idx->next;
+				
+				
+				
+			}
+			else {
+				printf("Pair not found.  Marking largest.\n");
+				draw_red_X(squares, image);
+				
+				//temporary:
+				biggest_1 = squares;
+				biggest_2 = squares;
+			}
+			hasPair = 0;
+		}
+		else {
+			printf("No squares found.\n");
 		}
 		
-		//printf("Drawing the two largest\n");
-		// Only draw if we have 2 biggest squares
+		hasPair = 0;
+		
 		if(biggest_1 != NULL){
 			draw_green_X(biggest_1, image);
 			printf("Area 1 = %d", biggest_1->area);
@@ -277,10 +340,18 @@ int main(int argv, char **argc) {
 				square_count++;
 				printf("New Path Found\n");
 			}
-			ri_move(&ri, RI_TURN_RIGHT, 4); 
+			ri_move(&ri, RI_TURN_RIGHT, 7); 
 			
 		}
 		else{
+			/*
+			 * 	If we only find a single usable largest square:
+			 * 		if square is on left of screen, turn right, strafe right
+			 * 		if square is on right of screen, turn left, strafe left
+			 */	
+			
+			
+			
 			if(biggest_1 != NULL && biggest_2 != NULL ) {
 				draw_red_X(biggest_2, image);
 				printf("\tArea 2 = %d\n", biggest_2->area);
@@ -342,7 +413,7 @@ int main(int argv, char **argc) {
 				ri_move(&ri, RI_MOVE_BACKWARD , 1); 
 			}
 		}
-		printf("111111111111111111111111111111111\n");
+
 		// display a straight vertical line
 		draw_vertical_line(image);
 		
@@ -351,8 +422,7 @@ int main(int argv, char **argc) {
 		
 		// Update the UI (10ms wait)
 		cvWaitKey(10);
-		
-		printf("2222222222222222222222222222222\n");
+	
 		// Release the square data
 		while(squares != NULL) {
 			
@@ -360,7 +430,6 @@ int main(int argv, char **argc) {
 			free(squares);
 			squares = sq_idx;	
 		}
-		printf("333333333333333333333333333333333\n");
 		biggest_1 = NULL;
 		biggest_2 = NULL;
 
