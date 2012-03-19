@@ -107,14 +107,15 @@ bool is_same_square(squares_t *square1, squares_t *square2){
 	   
 	return false;
 }
-void get_diff_in_y(squares_t *square1, squares_t *square2){
+int get_diff_in_y(squares_t *square1, squares_t *square2){
 	int y_1, y_2, diff;
 	
 	y_1 = square1->center.y;
 	y_2 = square2->center.y;
 	
-	diff = y_1 - y_2;
+	diff = abs(y_1 - y_2);
 	printf("square_1 y = %d\t square_2 y = %d\tdifference in y = %d\n", y_1, y_2, diff);
+	return diff;
 }
 
 // Draw an X marker on the image
@@ -128,6 +129,8 @@ float getRatio(int x, int y) {  // x>y
 int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){//set thresh around .5
   //compare areas
   float ratio;
+  int diff;
+  
   if((square1->area)<(square2->area))
     ratio = getRatio((int)square1->area, (int)square2->area);
   else if((square1->area)>(square2->area))
@@ -135,7 +138,9 @@ int isPair(squares_t *square1, squares_t *square2, float area_ratio_threshold){/
   else 
     ratio = 1;
   
-  if(ratio > area_ratio_threshold)
+  diff = get_diff_in_y(square1, square2);
+  
+  if(ratio > area_ratio_threshold && diff < 25)
       if(abs((square1->center.x) - (square2->center.x))>=50)//if they're not in the same place ie: the same square
 	return 1;
       else
