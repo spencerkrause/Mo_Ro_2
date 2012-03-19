@@ -134,10 +134,12 @@ float getRatio(int x, int y) {  // x>y
 
 int main(int argv, char **argc) {
 	robot_if_t ri;
-	int major, minor, x_dist_diff;
+	int major, minor, x_dist_diff, square_count, prev_square_area_1 = 0, prev_square_area_2 = 0;
 	IplImage *image = NULL, *hsv = NULL, *threshold_1 = NULL, *threshold_2 = NULL, *final_threshold = NULL;
 	squares_t *squares, *biggest_1, *biggest_2, *sq_idx;
 	bool same_square;
+	
+	square_count = 0;
 	
 	// Make sure we have a valid command line argument
 	if(argv <= 1) {
@@ -258,57 +260,89 @@ int main(int argv, char **argc) {
 			draw_green_X(biggest_1, image);
 			printf("Area 1 = %d", biggest_1->area);
 		}
-		if(biggest_1 != NULL && biggest_2 != NULL ) {
-			draw_red_X(biggest_2, image);
-			printf("\tArea 2 = %d\n", biggest_2->area);
+		
+		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
+		if (square_count == 3){	
+			ri_move(&ri, RI_MOVE_FORWARD, 1);
+			if (ri_IR_Detected(&ri)) {
+				square_count++;
+				printf("Object detected, square_count = %d\n", square_count);
+			}		
+	
+		}
+		else if(square_count == 4){
+			printf("Rotating\n");
 			
-			//get the difference in distance between the two biggest squares and the center vertical line
-			x_dist_diff = get_square_diffence(biggest_1, biggest_2, image);
-			get_diff_in_y(biggest_1, biggest_2);
+			if (biggest_1 != NULL && biggest_2 != NULL && (biggest_1->area - biggest_2->area) < 500){
+				square_count++;
+				printf("New Path Found\n");
+			}
+			ri_move(&ri, RI_TURN_RIGHT, 4); 
 			
-			//when the camera can't detect the other biggest square, which means now the second biggest square
-			//is much smaller than the first biggest square
-			if ((biggest_1->area - biggest_2->area) > 500){
-				//if both squares are at the left side of the center line
-				if (biggest_1->center.x < image->width/2 && biggest_2->center.x < image->width/2){
-					printf("rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 6); 
-				}
-				//if both squares are at the right side of the center line
-				else if (biggest_1->center.x > image->width/2 && biggest_2->center.x > image->width/2){
-					printf("rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 6); 
-				}
-				//if the center line is in the middle of the two biggest squares
-				else if (biggest_1->center.x < image->width/2 && biggest_2->center.x > image->width/2 ){
-					printf("rotate right at speed = 2\n");
-					ri_move(&ri, RI_TURN_RIGHT, 2); 
+		}
+		else{
+			if(biggest_1 != NULL && biggest_2 != NULL ) {
+				draw_red_X(biggest_2, image);
+				printf("\tArea 2 = %d\n", biggest_2->area);
+				
+				//get the difference in distance between the two biggest squares and the center vertical line
+				x_dist_diff = get_square_diffence(biggest_1, biggest_2, image);
+				get_diff_in_y(biggest_1, biggest_2);
+				
+				//when the camera can't detect the other biggest square, which means now the second biggest square
+				//is much smaller than the first biggest square
+				if ((biggest_1->area - biggest_2->area) > 500){
+					//if both squares are at the left side of the center line
+					if (biggest_1->center.x < image->width/2 && biggest_2->center.x < image->width/2){
+						printf("rotate right at speed = 6\n");
+						ri_move(&ri, RI_TURN_RIGHT, 6); 
+					}
+					//if both squares are at the right side of the center line
+					else if (biggest_1->center.x > image->width/2 && biggest_2->center.x > image->width/2){
+						printf("rotate left at speed = 6\n");
+						ri_move(&ri, RI_TURN_LEFT, 6); 
+					}
+					//if the center line is in the middle of the two biggest squares
+					else if (biggest_1->center.x < image->width/2 && biggest_2->center.x > image->width/2 ){
+						printf("rotate right at speed = 2\n");
+						ri_move(&ri, RI_TURN_RIGHT, 2); 
+						
+					}
+					else{
+						printf("rotate left at speed = 2\n");
+						ri_move(&ri, RI_TURN_LEFT, 2); 
+					}
 					
 				}
 				else{
-					printf("rotate left at speed = 2\n");
-					ri_move(&ri, RI_TURN_LEFT, 2); 
+					if (prev_square_area_1 != 0 && prev_square_area_2 != 0 && 
+						biggest_1->area < prev_square_area_1  && biggest_2->area < prev_square_area_2 ){
+						square_count++;
+						printf("square count = %d\n", square_count);
+					}
+					//rotate to the left
+					if (x_dist_diff < -40){
+						printf("rotate left at speed = 6\n");
+						ri_move(&ri, RI_TURN_LEFT, 6); 
+					}
+					//rotate to the right
+					else if (x_dist_diff > 40){
+						printf("rotate right at speed = 6\n");
+						ri_move(&ri, RI_TURN_RIGHT, 6);
+					}
+					prev_square_area_1 = biggest_1->area;
+					prev_square_area_2 = biggest_2->area;
+					
 				}
-				
+				ri_move(&ri, RI_MOVE_FORWARD, 5);
 			}
-			else{
-				//rotate to the left
-				if (x_dist_diff < -40){
-					printf("rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 6); 
-				}
-				//rotate to the right
-				else if (x_dist_diff > 40){
-					printf("rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 6); 
-				}
+			//once the camera can't detect any squares, make the robot go backwards
+			else if (biggest_1 == NULL && biggest_2 == NULL){
+				printf("Move Backwards\n");
+				ri_move(&ri, RI_MOVE_BACKWARD , 1); 
 			}
-			ri_move(&ri, RI_MOVE_FORWARD, 5); 
 		}
-		else if (biggest_1 != NULL){
-			printf("\n");
-		}
-		
+		printf("111111111111111111111111111111111\n");
 		// display a straight vertical line
 		draw_vertical_line(image);
 		
@@ -318,13 +352,15 @@ int main(int argv, char **argc) {
 		// Update the UI (10ms wait)
 		cvWaitKey(10);
 		
+		printf("2222222222222222222222222222222\n");
 		// Release the square data
 		while(squares != NULL) {
+			
 			sq_idx = squares->next;
 			free(squares);
 			squares = sq_idx;	
 		}
-		
+		printf("333333333333333333333333333333333\n");
 		biggest_1 = NULL;
 		biggest_2 = NULL;
 
@@ -332,7 +368,7 @@ int main(int argv, char **argc) {
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
-		getc(stdin);
+		//getc(stdin);
 	} while(1);
 
 	// Clean up (although we'll never get here...)
