@@ -324,7 +324,7 @@ int main(int argv, char **argc) {
 			printf("Area 1 = %d", biggest_1->area);
 		}
 		
-		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
+		//we only see the last pair of squares, go straight ahead until IR_Detect stops the robot
 		if (square_count == 3){	
 			ri_move(&ri, RI_MOVE_FORWARD, 1);
 			if (ri_IR_Detected(&ri)) {
@@ -333,6 +333,7 @@ int main(int argv, char **argc) {
 			}		
 	
 		}
+		//once the robot is at the intersection, rotate right until it detects a pair of squares
 		else if(square_count == 4){
 			printf("Rotating\n");
 			
@@ -360,7 +361,7 @@ int main(int argv, char **argc) {
 				x_dist_diff = get_square_diffence(biggest_1, biggest_2, image);
 				get_diff_in_y(biggest_1, biggest_2);
 				
-				//when the camera can't detect the other biggest square, which means now the second biggest square
+				//when the camera can't detect a pair of squares, which means now the second biggest square
 				//is much smaller than the first biggest square
 				if ((biggest_1->area - biggest_2->area) > 500){
 					//if both squares are at the left side of the center line
@@ -386,6 +387,7 @@ int main(int argv, char **argc) {
 					
 				}
 				else{
+					//increment square_count whenever the robot pass by a pair of squares
 					if (prev_square_area_1 != 0 && prev_square_area_2 != 0 && 
 						biggest_1->area < prev_square_area_1  && biggest_2->area < prev_square_area_2 ){
 						square_count++;
