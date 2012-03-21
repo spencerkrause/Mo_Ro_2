@@ -17,6 +17,9 @@
  * 
  */
 
+#define MIN_AREA	1200
+#define MAX_AREA	1300
+
 #include "robot_if.h"
 #include "robot_color.h"
 #include <stdio.h>
@@ -175,14 +178,20 @@ void printAreas(squares_t *squares) {
        }
 }
 
-int main(int argv, char **argc) {
-	robot_if_t ri;
-	int 	x_dist_diff, 
-		square_count = 0, 
-		prev_square_area_1 = 0,
-		prev_square_area_2 = 0,
-		prev_square_area_3 = 0,
-		prev_square_area_4 = 0;
+void freeSquares(squares_t *s) {
+	squares_t *sq_idx;
+      
+	while(s != NULL) {
+		sq_idx = s->next;
+		free(s);
+		s = sq_idx;	
+	}
+}
+
+int center(robot_if_t *ri) {
+	int 	x_dist_diff,
+		flag,
+		cnt = 0;
 	IplImage *image = NULL, 
 		*hsv = NULL, 
 		*threshold_1 = NULL, 
@@ -198,29 +207,6 @@ int main(int argv, char **argc) {
 		onlyLargest = 0,
 		twoLargest = 0;
 	
-	// Make sure we have a valid command line argument
-	if(argv <= 1) {
-		printf("Usage: robot_test <address of robot>\n");	
-		exit(-1);
-	}
-
-	// Setup the robot with the address passed in
-	if(ri_setup(&ri, argc[1], 0)) {
-		printf("Failed to setup the robot!\n");
-		exit(-1);
-	}
-
-	// Setup the camera
-	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_MID)) {
-		printf("Failed to configure the camera!\n");
-		exit(-1);
-	}
-
-	// Create a window to display the output
-	//cvNamedWindow("Rovio Camera", CV_WINDOW_AUTOSIZE);
-	cvNamedWindow("Square Display", CV_WINDOW_AUTOSIZE);
-	cvNamedWindow("Thresholded", CV_WINDOW_AUTOSIZE);
-
 	// Create an image to store the image from the camera
 	image = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
 
@@ -234,18 +220,18 @@ int main(int argv, char **argc) {
 	final_threshold = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 1);
 
 	// Move the head up to the middle position
-	ri_move(&ri, RI_HEAD_MIDDLE, RI_FASTEST);
+	ri_move(ri, RI_HEAD_MIDDLE, RI_FASTEST);
 	
 	// Action loop
 	do {
 		// Update the robot's sensor information
-		if(ri_update(&ri) != RI_RESP_SUCCESS) {
+		if(ri_update(ri) != RI_RESP_SUCCESS) {
 			printf("Failed to update sensor information!\n");
 			continue;
 		}
 
 		// Get the current camera image
-		if(ri_get_image(&ri, image) != RI_RESP_SUCCESS) {
+		if(ri_get_image(ri, image) != RI_RESP_SUCCESS) {
 			printf("Unable to capture an image!\n");
 			continue;
 		}
@@ -327,123 +313,97 @@ int main(int argv, char **argc) {
 			}
 		}
 		
-		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
-		
-		if (square_count == 9){
-			printf("Moving forward, count equals 4\n");
-			ri_move(&ri, RI_MOVE_FORWARD, 5);
-			if (ri_IR_Detected(&ri)) {
-				square_count++;
-				printf("Object detected, square_count = %d\n", square_count);
-			}		
-	
-		}
-		
-		else if(square_count == 10){
-			printf("Rotating\n");
+		/* If we have a pair, get the biggest pair to desired area range */
+		if(hasPair) {
+			cnt = 0;
+			//get the difference in distance between each square and the center vertical line
+			x_dist_diff = get_square_diffence(pair_square_1, pair_square_2, image);
+						
+			//rotate to the left
+			if (x_dist_diff < -40){
+				printf("Has pair.  Diff < - 40.  rotate left at speed = 5\n");
+				ri_move(ri, RI_TURN_LEFT, 5);
+				ri_move(ri, RI_STOP, 1);
+			}
 			
-			if (hasPair){
-				square_count++;
-				printf("New Path Found\n");
+			//rotate to the right
+			else if (x_dist_diff > 40){
+				printf("Has pair.  Diff > 40.  rotate right at speed = 5\n");
+				ri_move(ri, RI_TURN_RIGHT, 5);
+				ri_move(ri, RI_STOP, 1);				
 			}
-			ri_move(&ri, RI_TURN_RIGHT, 3);
-			ri_move(&ri, RI_STOP, 3);
-			
+			else if (pair_square_1->area <= MIN_AREA || pair_square_2->area <= MIN_AREA ) {
+				printf("Has pair.  Didn't go far enough.  Move forward at speed = 5\n");
+				ri_move(ri, RI_MOVE_FORWARD, 5);				
+			}
+			else if (pair_square_1->area >= MAX_AREA || pair_square_2->area >= MAX_AREA) {
+				printf("Has pair.  Went too far.  Move backwards at speed = 5\n");
+				ri_move(ri, RI_MOVE_BACKWARD, 5);
+				
+			}
+			else {
+				flag = 1;
+				break;
+			}
 		}
-		else if(square_count > 16) {
-			ri_move(&ri, RI_MOVE_FORWARD, 5);
-		}
-		else{
-			if(hasPair) {
-								
-				//get the difference in distance between each square and the center vertical line
-				x_dist_diff = get_square_diffence(pair_square_1, pair_square_2, image);
-				
-				if (prev_square_area_1 != 0 && prev_square_area_2 != 0 && 
-					pair_square_1->area < prev_square_area_1  && pair_square_2->area < prev_square_area_2 &&
-					pair_square_1->area < prev_square_area_3  && pair_square_2->area < prev_square_area_4){
-					square_count++;
-					printf("square count = %d\n", square_count);
-				}
-				
-				//rotate to the left
-				if (x_dist_diff < -40){
-					printf("Has pair.  Diff < - 40.  rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 6);					
-				}
-				
-				//rotate to the right
-				else if (x_dist_diff > 40){
-					printf("Has pair.  Diff > 40.  rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 6);					
-				}
-				
-				prev_square_area_3 = prev_square_area_1;
-				prev_square_area_4 = prev_square_area_2;
-				
-				prev_square_area_1 = pair_square_1->area;
-				prev_square_area_2 = pair_square_2->area;
-				
-				
-				ri_move(&ri, RI_MOVE_FORWARD, 5);
-			}
-			else if(twoLargest) /* when pair not detected, second biggest square is smaller than the first biggest square */
-			{
-				if ((largest->area - next_largest->area) > 500){
-					//if both squares are at the left side of the center line
-					if (largest->center.x < image->width/2 && next_largest->center.x < image->width/2){
-						printf("Both squares left of center line.  rotate right at speed = 6\n");
-						ri_move(&ri, RI_TURN_RIGHT, 6);
-						ri_move(&ri, RI_STOP, 1);
-					}
-					//if both squares are at the right side of the center line
-					else if (largest->center.x > image->width/2 && next_largest->center.x > image->width/2){
-						printf("Both squares right of center line.  rotate left at speed = 6\n");
-						ri_move(&ri, RI_TURN_LEFT, 6); 
-						ri_move(&ri, RI_STOP, 1);
-					}
-					//if the center line is in the middle of the two biggest squares
-					else if (largest->center.x < image->width/2 && next_largest->center.x > image->width/2 ){
-						printf("Center in middle of twoLargest on left.  rotate right at speed = 6\n");
-						ri_move(&ri, RI_TURN_RIGHT, 4);
-						ri_move(&ri, RI_STOP, 1);
-					}
-					else{
-						printf("Center in middle of twoLargest on right.  rotate left at speed = 6\n");
-						ri_move(&ri, RI_TURN_LEFT, 4);
-						ri_move(&ri, RI_STOP, 1);
-					}
-					
-				}
-			}
-			else if(onlyLargest) /* If we only find a single usable largest square */
-			{
-			 	//if both squares are at the left side of the center line
-				if (largest->center.x < image->width/2){
-					printf("Only Largest Found on left.  rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 3);
-					ri_move(&ri, RI_STOP, 1);
+		else if(twoLargest) /* when pair not detected, second biggest square is smaller than the first biggest square */
+		{
+			cnt = 0;
+			if ((largest->area - next_largest->area) > 500){
+				//if both squares are at the left side of the center line
+				if (largest->center.x < image->width/2 && next_largest->center.x < image->width/2){
+					printf("Both squares left of center line.  rotate right at speed = 6\n");
+					ri_move(ri, RI_TURN_RIGHT, 5);
+					ri_move(ri, RI_STOP, 1);
 				}
 				//if both squares are at the right side of the center line
-				else if (largest->center.x > image->width/2){
-					printf("Only Largest Found on right.  rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 3);
-					ri_move(&ri, RI_STOP, 1);
-				} 
-			}
-			else	/* once the camera can't detect any squares, make the robot go backwards */
-			{
-				printf("No squares found.  Move Backwards\n");
-				ri_move(&ri, RI_MOVE_BACKWARD , 1);
-				
-				if (ri_IR_Detected(&ri) && square_count > 14) {
-					printf("Found the end\n");
-					break;
+				else if (largest->center.x > image->width/2 && next_largest->center.x > image->width/2){
+					printf("Both squares right of center line.  rotate left at speed = 6\n");
+					ri_move(ri, RI_TURN_LEFT, 5); 
+					ri_move(ri, RI_STOP, 1);
+				}
+				//if the center line is in the middle of the two biggest squares
+				else if (largest->center.x < image->width/2 && next_largest->center.x > image->width/2 ){
+					printf("Center in middle of twoLargest on left.  rotate right at speed = 6\n");
+					ri_move(ri, RI_TURN_RIGHT, 5);
+					ri_move(ri, RI_STOP, 1);
+				}
+				else{
+					printf("Center in middle of twoLargest on right.  rotate left at speed = 6\n");
+					ri_move(ri, RI_TURN_LEFT, 5);
+					ri_move(ri, RI_STOP, 1);
 				}
 				
 			}
 		}
-
+		else if(onlyLargest) /* If we only find a single usable largest square */
+		{
+			cnt = 0;
+			//if both squares are at the left side of the center line
+			if (largest->center.x < image->width/2){
+				printf("Only Largest Found on left.  rotate right at speed = 6\n");
+				ri_move(ri, RI_TURN_RIGHT, 5);
+				ri_move(ri, RI_STOP, 1);
+			}
+			//if both squares are at the right side of the center line
+			else if (largest->center.x > image->width/2){
+				printf("Only Largest Found on right.  rotate left at speed = 6\n");
+				ri_move(ri, RI_TURN_LEFT, 5);
+				ri_move(ri, RI_STOP, 1);
+			} 
+		}
+		else	/* once the camera can't detect any squares, make the robot go backwards */
+		{
+			cnt++;
+			if( cnt >= 5 )
+			  
+			printf("Needs to Rotate\n");
+			
+			flag = 0;
+			break;
+			
+		}
+		
 		// display a straight vertical line
 		draw_vertical_line(image);
 		
@@ -454,12 +414,7 @@ int main(int argv, char **argc) {
 		cvWaitKey(10);
 	
 		// Release the square data
-		while(squares != NULL) 
-		{
-			sq_idx = squares->next;
-			free(squares);
-			squares = sq_idx;	
-		}
+		freeSquares(squares);
 		
 		/* reset loop control variables */
 		pair_square_1 = NULL;
@@ -471,23 +426,60 @@ int main(int argv, char **argc) {
 		twoLargest = 0;
 
 		// Move forward unless there's something in front of the robot
-		/*if(!ri_IR_Detected(&ri))
-			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
+		/*if(!ri_IR_Detected(ri))
+			ri_move(ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
-		printf("Square Count = %d\n", square_count);
 		//getc(stdin);
 	} while(1);
-
-	// Clean up (although we'll never get here...)
-	//cvDestroyWindow("Rovio Camera");
-	cvDestroyWindow("Square Display");
-	cvDestroyWindow("Thresholded");
 	
+	ri_move(ri, RI_HEAD_DOWN, RI_FASTEST);
+
 	// Free the images
 	cvReleaseImage(&threshold_1);
 	cvReleaseImage(&threshold_2);
 	cvReleaseImage(&final_threshold);
 	cvReleaseImage(&hsv);
+	cvReleaseImage(&image);
+
+	return flag;
+}
+
+int main(int argv, char **argc) {
+	robot_if_t ri;
+	IplImage *image = NULL;		
+		
+	// Make sure we have a valid command line argument
+	if(argv <= 1) {
+		printf("Usage: robot_test <address of robot>\n");	
+		exit(-1);
+	}
+
+	// Setup the robot with the address passed in
+	if(ri_setup(&ri, argc[1], 0)) {
+		printf("Failed to setup the robot!\n");
+		exit(-1);
+	}
+
+	// Setup the camera
+	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_MID)) {
+		printf("Failed to configure the camera!\n");
+		exit(-1);
+	}
+
+	// Create a window to display the output
+	//cvNamedWindow("Rovio Camera", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("Square Display", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("Thresholded", CV_WINDOW_AUTOSIZE);
+
+	// Create an image to store the image from the camera
+	image = cvCreateImage(cvSize(640, 480), IPL_DEPTH_8U, 3);
+
+	center(&ri);
+	
+	cvDestroyWindow("Square Display");
+	cvDestroyWindow("Thresholded");
+	
+	// Free the images
 	cvReleaseImage(&image);
 
 	return 0;
