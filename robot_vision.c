@@ -179,8 +179,10 @@ int main(int argv, char **argc) {
 	robot_if_t ri;
 	int 	x_dist_diff, 
 		square_count = 0, 
-		prev_square_area_1 = 0, 
-		prev_square_area_2 = 0;
+		prev_square_area_1 = 0,
+		prev_square_area_2 = 0,
+		prev_square_area_3 = 0,
+		prev_square_area_4 = 0;
 	IplImage *image = NULL, 
 		*hsv = NULL, 
 		*threshold_1 = NULL, 
@@ -192,8 +194,7 @@ int main(int argv, char **argc) {
 		*pair_square_1, 
 		*pair_square_2, 
 		*sq_idx;
-	bool 	same_square,
-		hasPair = 0,
+	bool 	hasPair = 0,
 		onlyLargest = 0,
 		twoLargest = 0;
 	
@@ -210,7 +211,7 @@ int main(int argv, char **argc) {
 	}
 
 	// Setup the camera
-	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_LOW)) {
+	if(ri_cfg_camera(&ri, RI_CAMERA_DEFAULT_BRIGHTNESS, RI_CAMERA_DEFAULT_CONTRAST, 5, RI_CAMERA_RES_640, RI_CAMERA_QUALITY_MID)) {
 		printf("Failed to configure the camera!\n");
 		exit(-1);
 	}
@@ -328,8 +329,8 @@ int main(int argv, char **argc) {
 		
 		//we only see the last pair of squares, go straight ahead and make a 90 degree right turn
 		
-		if (0){ //(square_count == 3){
-			printf("Moving forward, count equals 3\n");
+		if (square_count == 9){
+			printf("Moving forward, count equals 4\n");
 			ri_move(&ri, RI_MOVE_FORWARD, 5);
 			if (ri_IR_Detected(&ri)) {
 				square_count++;
@@ -337,15 +338,20 @@ int main(int argv, char **argc) {
 			}		
 	
 		}
-		else if(square_count == 4){
+		
+		else if(square_count == 10){
 			printf("Rotating\n");
 			
 			if (hasPair){
 				square_count++;
 				printf("New Path Found\n");
 			}
-			ri_move(&ri, RI_TURN_RIGHT, 7); 
+			ri_move(&ri, RI_TURN_RIGHT, 3);
+			ri_move(&ri, RI_STOP, 3);
 			
+		}
+		else if(square_count > 16) {
+			ri_move(&ri, RI_MOVE_FORWARD, 5);
 		}
 		else{
 			if(hasPair) {
@@ -354,22 +360,30 @@ int main(int argv, char **argc) {
 				x_dist_diff = get_square_diffence(pair_square_1, pair_square_2, image);
 				
 				if (prev_square_area_1 != 0 && prev_square_area_2 != 0 && 
-					pair_square_1->area < prev_square_area_1  && pair_square_2->area < prev_square_area_2 ){
+					pair_square_1->area < prev_square_area_1  && pair_square_2->area < prev_square_area_2 &&
+					pair_square_1->area < prev_square_area_3  && pair_square_2->area < prev_square_area_4){
 					square_count++;
 					printf("square count = %d\n", square_count);
 				}
+				
 				//rotate to the left
 				if (x_dist_diff < -40){
 					printf("Has pair.  Diff < - 40.  rotate left at speed = 6\n");
 					ri_move(&ri, RI_TURN_LEFT, 6);					
 				}
+				
 				//rotate to the right
 				else if (x_dist_diff > 40){
 					printf("Has pair.  Diff > 40.  rotate right at speed = 6\n");
 					ri_move(&ri, RI_TURN_RIGHT, 6);					
 				}
+				
+				prev_square_area_3 = prev_square_area_1;
+				prev_square_area_4 = prev_square_area_2;
+				
 				prev_square_area_1 = pair_square_1->area;
 				prev_square_area_2 = pair_square_2->area;
+				
 				
 				ri_move(&ri, RI_MOVE_FORWARD, 5);
 			}
@@ -407,22 +421,26 @@ int main(int argv, char **argc) {
 			 	//if both squares are at the left side of the center line
 				if (largest->center.x < image->width/2){
 					printf("Only Largest Found on left.  rotate right at speed = 6\n");
-					ri_move(&ri, RI_TURN_RIGHT, 6);
-					ri_move(&ri, RI_MOVE_FWD_RIGHT, 6);
+					ri_move(&ri, RI_TURN_RIGHT, 3);
 					ri_move(&ri, RI_STOP, 1);
 				}
 				//if both squares are at the right side of the center line
 				else if (largest->center.x > image->width/2){
 					printf("Only Largest Found on right.  rotate left at speed = 6\n");
-					ri_move(&ri, RI_TURN_LEFT, 6);
-					ri_move(&ri, RI_MOVE_FWD_LEFT, 6);
+					ri_move(&ri, RI_TURN_LEFT, 3);
 					ri_move(&ri, RI_STOP, 1);
-				}			 
+				} 
 			}
 			else	/* once the camera can't detect any squares, make the robot go backwards */
 			{
 				printf("No squares found.  Move Backwards\n");
-				ri_move(&ri, RI_MOVE_BACKWARD , 1); 
+				ri_move(&ri, RI_MOVE_BACKWARD , 1);
+				
+				if (ri_IR_Detected(&ri) && square_count > 14) {
+					printf("Found the end\n");
+					break;
+				}
+				
 			}
 		}
 
@@ -456,7 +474,8 @@ int main(int argv, char **argc) {
 		/*if(!ri_IR_Detected(&ri))
 			ri_move(&ri, RI_MOVE_FORWARD, RI_SLOWEST);*/
 		//printf("Loop Complete\n");
-		getc(stdin);
+		printf("Square Count = %d\n", square_count);
+		//getc(stdin);
 	} while(1);
 
 	// Clean up (although we'll never get here...)
